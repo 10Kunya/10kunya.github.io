@@ -277,9 +277,12 @@ function padHtml(title) {
       <button data-k="del" class="del" aria-label="ลบ"><i class="ti ti-backspace"></i></button></div>`;
 }
 // onOk(ค่า, pad) — pad.reset(หัวข้อใหม่, ข้อความผิดพลาด) เพื่อเริ่มใส่ใหม่
-function bindPad(root, onOk) {
+function bindPad(root, onOk, autoLen) {
   let v = '', busy = false;
-  const dots = () => { $('#kd', root).innerHTML = Array.from({ length: Math.max(4, v.length) }, (_, i) => `<span class="${i < v.length ? 'on' : ''}"></span>`).join(''); };
+  const dots = () => {
+    const n = (autoLen && autoLen()) || Math.max(4, v.length);
+    $('#kd', root).innerHTML = Array.from({ length: Math.max(n, v.length) }, (_, i) => `<span class="${i < v.length ? 'on' : ''}"></span>`).join('');
+  };
   const pad = {
     reset(title, err) { v = ''; busy = false; if (title) $('#kt', root).textContent = title; $('#ke', root).textContent = err || ''; dots(); },
     wait(msg) { busy = true; $('#ke', root).textContent = msg; }
@@ -294,6 +297,8 @@ function bindPad(root, onOk) {
     if (k === 'del') v = v.slice(0, -1); else if (v.length < 8) v += k;
     $('#ke', root).textContent = '';
     dots();
+    const n = autoLen ? autoLen() : 0;
+    if (k !== 'del' && n && v.length === n) onOk(v, pad);
   });
   dots();
   return pad;
@@ -317,7 +322,7 @@ async function showLogin() {
     if (!r.ok) { firstVal = ''; return pad.reset(first ? t1 : null, r.msg); }
     B.sess = r.sess; store.set('k10_sess', r.sess);
     boot();
-  });
+  }, () => first ? firstVal.length : st.pinLen);
 }
 
 /*** ---------- คิววันนี้ ---------- ***/
@@ -726,7 +731,8 @@ $('#app').addEventListener('click', async e => {
   });
 });
 
-function pinSheet() {
+async function pinSheet() {
+  const st = await call('barberStatus').catch(() => ({ pinLen: 0 }));
   const sh = openSheet(`<div id="pr2" style="text-align:center"><h3>เปลี่ยน PIN</h3>${padHtml('PIN เดิม')}</div>`);
   let oldPin = '', newPin = '';
   bindPad($('#pr2', sh), async (v, pad) => {
@@ -737,7 +743,7 @@ function pinSheet() {
     const r = await api('changePin', oldPin, newPin).catch(() => null);
     if (!r || !r.ok) { oldPin = newPin = ''; return pad.reset('PIN เดิม', r ? r.msg : 'เชื่อมต่อไม่สำเร็จ'); }
     closeSheet(); toast('เปลี่ยน PIN แล้ว');
-  });
+  }, () => !oldPin ? st.pinLen : newPin ? newPin.length : 0);
 }
 
 /*** ---------- สมาชิก ---------- ***/
