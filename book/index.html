@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>๑๐ กันยา · จองคิว</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=IBM+Plex+Sans+Thai:wght@400;500&family=Noto+Serif+Thai:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" rel="stylesheet">
+<style>
+:root{
+  color-scheme: dark;
+  --bg:#141210; --card:#1B1815; --gold-bg:#1E1A15;
+  --line:#221F1B; --line2:#2E2925; --gold-line:#6B5A3E;
+  --text:#E6DFD4; --mute:#857C70; --dim:#4A443D;
+  --gold:#C9A66B; --warn:#C49384; --ok:#9DB58A;
+  --sans:'IBM Plex Sans Thai',system-ui,sans-serif;
+  --serif:'Cormorant Garamond','Noto Serif Thai',Georgia,serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.55}
+button,input,select{font:inherit;color:inherit}
+button{background:none;border:0;padding:0;cursor:pointer}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:440px;margin:0 auto;padding:22px 20px calc(96px + env(safe-area-inset-bottom))}
+.sv{font-family:var(--serif);font-variant-numeric:lining-nums tabular-nums;font-weight:500}
+.mu{color:var(--mute);font-size:13px}
+.au{color:var(--gold)}
+.ti{vertical-align:-2px}
+
+.head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:22px}
+.brand{font-size:24px;letter-spacing:.5px}
+
+.chips{display:grid;gap:8px}
+.chip{border:1px solid var(--line2);border-radius:10px;padding:9px 0;text-align:center;transition:border-color .15s,background .15s}
+.chip.on{border-color:var(--gold);background:var(--gold-bg);color:var(--gold)}
+.chip.off{color:var(--dim);border-style:dashed;cursor:default}
+.chip small{display:block;color:var(--mute);font-size:12px}
+.chip.on small{color:var(--gold)}
+
+.row{display:flex;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid var(--line)}
+.field{display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line2);padding:4px 0}
+.field i{color:var(--mute);font-size:18px}
+.field input{flex:1;background:transparent;border:0;outline:0;padding:10px 0;font-size:16px}
+.field input::placeholder{color:var(--dim)}
+.field:focus-within{border-color:var(--gold-line)}
+.err{color:var(--warn);font-size:13px;min-height:0;margin-top:4px}
+.err:empty{display:none}
+
+.btn{display:block;width:100%;background:var(--gold);color:var(--bg);border-radius:12px;padding:14px;text-align:center;font-weight:500;font-size:16px}
+.btn:active{transform:scale(.98)}
+.btn.line{background:transparent;color:var(--text);border:1px solid var(--line2)}
+.btn.busy{opacity:.6;pointer-events:none}
+.link{color:var(--mute);font-size:14px;text-align:center;display:block;width:100%;padding:12px}
+
+.card{border:1px solid var(--gold-line);border-radius:14px}
+.ring{width:46px;height:46px;border-radius:50%;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:21px;flex-shrink:0}
+
+.nav{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--line);padding:10px 0 calc(10px + env(safe-area-inset-bottom))}
+.nav div{max-width:440px;margin:0 auto;display:flex;justify-content:space-around}
+.nav button{font-size:23px;color:var(--dim);padding:6px 16px}
+.nav button.on{color:var(--gold)}
+
+.shade{position:fixed;inset:0;background:rgba(8,7,6,.7);display:flex;align-items:flex-end;justify-content:center;z-index:20;animation:fade .15s}
+.sheet{background:var(--card);border:1px solid var(--line2);border-bottom:0;border-radius:20px 20px 0 0;width:100%;max-width:440px;padding:22px 20px calc(22px + env(safe-area-inset-bottom));max-height:88vh;overflow:auto;animation:up .2s ease-out}
+.sheet h3{margin:0 0 14px;font-weight:500;font-size:20px}
+.act{display:flex;align-items:center;gap:14px;width:100%;padding:14px 2px;border-bottom:1px solid var(--line);text-align:left;font-size:16px}
+.act i{font-size:20px;color:var(--mute);width:22px}
+.act.gold i,.act.gold{color:var(--gold)}
+.act.warn i,.act.warn{color:var(--warn)}
+.act:last-child{border-bottom:0}
+
+.badge{display:inline-flex;align-items:center;gap:5px;border:1px solid;border-radius:20px;padding:2px 10px;font-size:12px;white-space:nowrap}
+.bar{height:4px;background:var(--line2);border-radius:2px;margin:6px 0 4px;overflow:hidden}
+.bar div{height:100%;background:var(--gold);border-radius:2px}
+.rw{border:1px solid var(--line2);border-radius:12px;padding:11px 14px;display:flex;align-items:center;gap:12px;margin-bottom:8px;width:100%;text-align:left}
+.rw i{font-size:18px}
+.rw.dim{opacity:.5}
+.rw.can{border-color:var(--gold-line)}
+
+.toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 18px;border-radius:24px;font-size:14px;z-index:30;animation:fade .15s;white-space:nowrap}
+.load{display:flex;justify-content:center;padding:80px 0;color:var(--dim);font-size:26px}
+.load i{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fade{from{opacity:0}}
+@keyframes up{from{transform:translateY(30px);opacity:0}}
+</style>
+
+<style>
+.wheel-wrap{position:relative;margin:0 -20px 12px}
+.wheel{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;padding:0 calc(50% - 38px);
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 30%,#000 70%,transparent);mask-image:linear-gradient(90deg,transparent,#000 30%,#000 70%,transparent)}
+.wheel::-webkit-scrollbar{display:none}
+.wheel button{flex:0 0 76px;height:72px;scroll-snap-align:center;font-family:var(--serif);font-variant-numeric:lining-nums;font-weight:500;font-size:21px;color:var(--dim);transition:color .15s,font-size .15s}
+.wheel button.mid{color:var(--text);font-size:32px}
+.wheel-mark{position:absolute;left:50%;top:6px;bottom:6px;width:84px;margin-left:-42px;border:1px solid var(--gold-line);border-radius:12px;pointer-events:none}
+.msg{font-size:13px;margin-bottom:10px;min-height:20px}
+.msg.warn{color:var(--warn)}
+.msg.ok{color:var(--ok)}
+.tk-top{padding:28px 18px 22px;text-align:center}
+.tk-time{font-size:54px;line-height:1.15;margin-top:10px}
+.tk-bar{border-top:1px dashed var(--gold-line);display:flex;justify-content:space-around;padding:6px}
+.tk-bar a,.tk-bar button{color:var(--mute);font-size:21px;padding:10px 14px}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="load"><i class="ti ti-scissors"></i></div></div>
+<script>
+const $ = (s, el) => (el || document).querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const toMin = t => { const p = String(t).split(':'); return (+p[0]) * 60 + (+p[1]); };
+const toHM = m => ('0' + Math.floor(m / 60)).slice(-2) + ':' + ('0' + (m % 60)).slice(-2);
+
+const WD = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+const WD_FULL = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+const MO = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+const MO_FULL = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+const ymd = ds => ds.split('-').map(Number);
+const wday = ds => { const p = ymd(ds); return new Date(Date.UTC(p[0], p[1] - 1, p[2])).getUTCDay(); };
+const addDays = (ds, n) => { const p = ymd(ds); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10); };
+const dShort = ds => WD[wday(ds)] + ' ' + ymd(ds)[2] + ' ' + MO[ymd(ds)[1] - 1];
+const dLong = ds => 'วัน' + WD_FULL[wday(ds)] + ' ' + ymd(ds)[2] + ' ' + MO_FULL[ymd(ds)[1] - 1];
+function dRel(ds, today) {
+  const n = Math.round((Date.parse(ds) - Date.parse(today)) / 864e5);
+  return n === 0 ? 'วันนี้' : n === 1 ? 'พรุ่งนี้' : n === 2 ? 'มะรืน' : WD[wday(ds)];
+}
+function closedText(days) {
+  if (!days || !days.length) return 'เปิดทุกวัน';
+  return 'หยุดวัน' + days.slice().sort().map(d => WD_FULL[d]).join(' ');
+}
+
+// เรียก Apps Script แบบไม่ส่งคุกกี้ Google (กันปัญหามือถือที่ล็อกอินหลายบัญชี)
+const API_URL = 'https://script.google.com/macros/s/AKfycbxikYAE-wSNLOwdfVX2vK9Em2K1RQ-oap9v9WsbMzxUCD0PcSSpfxBRWHtXtjoZhPW8/exec';
+async function call(fn, ...args) {
+  const r = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ fn: fn, args: args }), credentials: 'omit' });
+  const j = await r.json();
+  if (j.error) throw new Error(j.error);
+  return j.result;
+}
+
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} }
+};
+
+let toastT;
+function toast(msg) {
+  let el = $('.toast');
+  if (!el) { el = document.createElement('div'); el.className = 'toast'; document.body.appendChild(el); }
+  el.textContent = msg;
+  clearTimeout(toastT);
+  toastT = setTimeout(() => el.remove(), 2400);
+}
+
+function openSheet(html, onClick) {
+  closeSheet();
+  const sh = document.createElement('div');
+  sh.className = 'shade';
+  sh.innerHTML = '<div class="sheet">' + html + '</div>';
+  sh.addEventListener('click', e => {
+    if (e.target === sh) return closeSheet();
+    const b = e.target.closest('[data-a]');
+    if (b && onClick) onClick(b.dataset.a, b, sh);
+  });
+  document.body.appendChild(sh);
+  return sh;
+}
+function closeSheet() { const s = $('.shade'); if (s) s.remove(); }
+
+function askConfirm(title, okText, cb) {
+  openSheet('<h3>' + esc(title) + '</h3>' +
+    '<button class="btn" data-a="yes" style="margin-top:6px">' + esc(okText) + '</button>' +
+    '<button class="link" data-a="no">ไม่ใช่</button>',
+    a => { closeSheet(); if (a === 'yes') cb(); });
+}
+
+/*** ---------- บัตรสมาชิก (ใช้ทั้งหน้าลูกค้าและหน้าช่าง) ---------- ***/
+const TIER_C = ['#B98260', '#C8C9CC', '#C9A66B', '#A9C3D9', '#C9B3DD'];
+function tierBadge(t) {
+  const c = TIER_C[t.idx % TIER_C.length];
+  const ic = t.count > 1 && t.idx === t.count - 1 ? 'ti-crown' : 'ti-medal';
+  return `<span class="badge" style="border-color:${c};color:${c}"><i class="ti ${ic}"></i> ${esc(t.name)}</span>`;
+}
+function memberCard(m) {
+  const t = m.tier, nx = t.next;
+  const pct = nx ? Math.max(0, Math.min(100, Math.round((m.lifetime - t.min) / (nx.min - t.min) * 100))) : 100;
+  return `<div class="card" style="padding:16px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+      <span class="mu" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.name || 'สมาชิก')} · ${esc(m.phone)}</span>${tierBadge(t)}
+    </div>
+    <div style="display:flex;align-items:baseline;gap:6px;margin:8px 0 2px">
+      <span class="sv au" style="font-size:44px;line-height:1">${m.points}</span><span class="mu">แต้มใช้ได้</span>
+    </div>
+    <div class="mu" style="margin-bottom:14px">ตัด 1 ครั้ง ได้ <span class="au">+${t.earn}</span> แต้ม · มาแล้ว ${m.visits} ครั้ง</div>
+    <div style="display:flex;justify-content:space-between" class="mu"><span>สะสมรวม ${m.lifetime}</span><span>${nx ? esc(nx.name) + ' ' + nx.min : 'ระดับสูงสุด'}</span></div>
+    <div class="bar"><div style="width:${pct}%"></div></div>
+    <div class="mu">${nx ? `อีก ${nx.min - m.lifetime} แต้ม ขึ้นระดับ${esc(nx.name)}` : 'ได้แต้มต่อครั้งสูงสุดแล้ว'}</div>
+  </div>`;
+}
+function rewardList(rewards, points, clickable) {
+  if (!rewards.length) return '';
+  return rewards.map((r, i) => {
+    const can = points >= r.cost;
+    const tag = clickable ? 'button' : 'div';
+    return `<${tag} class="rw ${can ? 'can' : 'dim'}" ${clickable && can ? `data-a="redeem" data-i="${i}"` : ''}>
+      <i class="ti ti-${esc(r.icon)} ${can ? 'au' : ''}"></i><span style="flex:1">${esc(r.name)}</span>
+      <span class="sv ${can ? 'au' : ''}" style="font-size:17px">${r.cost}</span></${tag}>`;
+  }).join('');
+}
+
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); toast('คัดลอกแล้ว'); }
+  catch (e) {
+    const sh = openSheet('<h3>คัดลอกลิงก์</h3><div class="field"><input readonly value="' + esc(text) + '"></div>' +
+      '<button class="link" data-a="x">ปิด</button>', () => closeSheet());
+    const i = $('input', sh); i.focus(); i.select();
+  }
+}
+</script>
+
+<script>
+const URL_TOKEN = (new URLSearchParams(location.search).get('t') || '').replace(/\W/g, '');
+const S = { d: null, day: '', time: '', pick: null, mode: 'book', resched: null };
+
+/*** ---------- โหลด ---------- ***/
+async function load(except) {
+  const toks = store.get('k10_tickets', []);
+  if (URL_TOKEN && toks.indexOf(URL_TOKEN) < 0) toks.push(URL_TOKEN);
+  try {
+    S.d = await call('getAvailability', toks, except || '');
+  } catch (e) {
+    $('#app').innerHTML = '<div class="load mu" style="font-size:15px">โหลดไม่สำเร็จ · ลองรีเฟรชอีกครั้ง</div>';
+    return false;
+  }
+  store.set('k10_tickets', S.d.tickets.map(t => t.token));
+  return true;
+}
+
+async function start() {
+  if (!await load()) return;
+  S.d.tickets.length ? showTickets() : showBook();
+}
+
+/*** ---------- หน้าจอง ---------- ***/
+function firstDay() {
+  const d = S.d.days.find(x => !x.closed && x.free.length) || S.d.days.find(x => !x.closed) || S.d.days[0];
+  return d.date;
+}
+
+// ทุกช่วงเวลาของวัน (ไม่บอกว่าช่วงไหนว่าง) — วันนี้ตัดช่วงที่ผ่านไปแล้วออก
+function slotsOf(date) {
+  const d = S.d, out = [];
+  for (let m = toMin(d.open); m + d.slotMin <= toMin(d.close); m += d.slotMin) {
+    if (date === d.now.date && m <= d.now.min) continue;
+    out.push(toHM(m));
+  }
+  return out;
+}
+function freeOf(date) { return (S.d.days.find(x => x.date === date) || { free: [] }).free; }
+
+function showBook(resched) {
+  S.mode = 'book';
+  S.resched = resched || null;
+  if (!S.day || !S.d.days.some(x => x.date === S.day && !x.closed)) S.day = firstDay();
+  const me = store.get('k10_me', {});
+  const d = S.d;
+  $('#app').innerHTML = `
+    <div class="head" style="align-items:flex-start">
+      <div><div class="sv brand">${esc(d.shop)}</div>
+      <div class="mu">${esc(d.open)} – ${esc(d.close)} · ${esc(closedText(d.closedDays))}</div></div>
+      ${S.resched ? '' : '<button id="mem" class="mu" style="font-size:13px;text-align:center"><i class="ti ti-id-badge-2 au" style="font-size:22px"></i><br>สมาชิก</button>'}
+    </div>
+    ${S.resched ? `<div class="mu" style="margin:-8px 0 16px"><i class="ti ti-pencil"></i> เลื่อนคิวเดิม ${dShort(S.resched.date)} ${esc(S.resched.time)}</div>` : ''}
+    <div class="chips" id="days" style="grid-template-columns:repeat(${Math.min(d.days.length, 4)},1fr);margin-bottom:22px"></div>
+    <div class="mu" style="margin-bottom:6px"><i class="ti ti-clock"></i> เลื่อนเลือกเวลา</div>
+    <div class="wheel-wrap"><div class="wheel" id="wh"></div><div class="wheel-mark"></div></div>
+    <div class="msg" id="msg"></div>
+    <div class="chips sv" id="sugs" style="grid-template-columns:repeat(3,1fr);margin-bottom:22px"></div>
+    ${S.resched ? '' : `<div id="who"></div>`}
+    <div class="err" id="ego" style="margin-top:14px"></div>
+    <button class="btn" id="go" style="margin-top:18px"></button>
+    ${S.resched ? '<button class="link" id="back">กลับไปที่ตั๋ว</button>' : (d.tickets.length ? '<button class="link" id="back">ดูคิวของฉัน</button>' : '')}
+  `;
+  $('#app').onclick = null;
+  renderDays();
+  if (!S.resched) renderWho(!(me.name && me.phone));
+  if ($('#mem')) $('#mem').onclick = () => showMember();
+  $('#sugs').addEventListener('click', e => {
+    const b = e.target.closest('[data-t]'); if (!b) return;
+    if (b.dataset.d !== S.day) { S.day = b.dataset.d; renderDays(); renderWheel(b.dataset.t); }
+    else spinTo(b.dataset.t, true);
+  });
+  $('#go').addEventListener('click', submit);
+  if ($('#back')) $('#back').addEventListener('click', () => S.resched ? load().then(ok => ok && showTickets()) : showTickets());
+  renderWheel(S.time);
+}
+
+// ชื่อ/เบอร์: พิมพ์ครั้งแรกครั้งเดียว ครั้งต่อไปแสดงเป็นบรรทัดเดียว
+function renderWho(edit) {
+  const me = store.get('k10_me', {}), box = $('#who');
+  box.innerHTML = edit ? `
+    <div class="field"><i class="ti ti-user"></i><input id="nm" placeholder="ชื่อ" maxlength="40" value="${esc(me.name || '')}" autocomplete="name"></div>
+    <div class="err" id="enm"></div>
+    <div class="field"><i class="ti ti-phone"></i><input id="ph" placeholder="เบอร์โทร" inputmode="tel" maxlength="12" value="${esc(me.phone || '')}" autocomplete="tel"></div>
+    <div class="err" id="eph"></div>` : `
+    <div class="row" style="border-bottom:1px solid var(--line2)">
+      <i class="ti ti-user mu" style="font-size:18px"></i>
+      <span style="flex:1">${esc(me.name)} <span class="mu">· ${esc(me.phone)}</span></span>
+      <button class="au" id="chg" style="font-size:14px">เปลี่ยน</button>
+    </div><div class="err" id="eph"></div>`;
+  if (edit) ['nm', 'ph'].forEach(id => $('#' + id).addEventListener('input', () => $('#e' + id).textContent = ''));
+  else $('#chg').onclick = () => renderWho(true);
+}
+
+function renderDays() {
+  const box = $('#days');
+  box.innerHTML = S.d.days.map(x => `
+    <button class="chip ${x.closed ? 'off' : x.date === S.day ? 'on' : ''}" data-d="${x.date}">
+      ${dRel(x.date, S.d.now.date)}<small>${x.closed ? 'ร้านหยุด' : WD[wday(x.date)] + ' ' + ymd(x.date)[2]}</small>
+    </button>`).join('');
+  box.onclick = e => {
+    const b = e.target.closest('[data-d]'); if (!b || b.classList.contains('off') || b.dataset.d === S.day) return;
+    S.day = b.dataset.d; renderDays(); renderWheel(S.time);
+  };
+}
+
+/*** ---------- วงล้อเวลา (เลื่อนซ้าย-ขวา) ---------- ***/
+const ITEM_W = 76;
+let spinT;
+function renderWheel(want) {
+  const wh = $('#wh'), list = slotsOf(S.day), free = freeOf(S.day);
+  if (!list.length) {
+    wh.innerHTML = '<div class="mu" style="padding:22px 0;width:100%;text-align:center">วันนี้ปิดรับคิวแล้ว</div>';
+    S.time = ''; S.pick = null; evaluate();
+    return;
+  }
+  wh.innerHTML = list.map(t => `<button data-w="${t}">${t}</button>`).join('');
+  const start = list.indexOf(want) >= 0 ? want : (free[0] || list[0]);
+  wh.onscroll = () => {
+    markMid();
+    clearTimeout(spinT);
+    spinT = setTimeout(() => {
+      const t = list[Math.max(0, Math.min(list.length - 1, Math.round(wh.scrollLeft / ITEM_W)))];
+      if (t !== S.time) { S.time = t; S.pick = null; evaluate(); }
+    }, 120);
+  };
+  wh.onclick = e => { const b = e.target.closest('[data-w]'); if (b) spinTo(b.dataset.w, true); };
+  spinTo(start, false);
+  S.time = start; S.pick = null; evaluate();
+}
+function spinTo(t, smooth) {
+  const wh = $('#wh'), i = [...wh.children].findIndex(b => b.dataset.w === t);
+  if (i < 0) return;
+  wh.scrollTo({ left: i * ITEM_W, behavior: smooth ? 'smooth' : 'auto' });
+  markMid();
+}
+function markMid() {
+  const wh = $('#wh'), i = Math.round(wh.scrollLeft / ITEM_W);
+  [...wh.children].forEach((b, j) => b.classList.toggle('mid', j === i));
+}
+
+// ช่วงว่างที่ใกล้เวลาที่ขอที่สุด k ช่วง (เรียงตามเวลา) + ช่วงที่ใกล้สุดจริง
+function nearest(free, m, k) {
+  const by = free.slice().sort((a, b) => Math.abs(toMin(a) - m) - Math.abs(toMin(b) - m) || toMin(a) - toMin(b)).slice(0, k);
+  return { best: by[0], list: by.sort() };
+}
+
+function evaluate() {
+  const d = S.d, free = freeOf(S.day), t = S.time;
+  let msg = '', cls = '', sugs = [];
+  if (!t) {
+    const nd = d.days.find(x => x.date > S.day && !x.closed && x.free.length);
+    if (nd) { msg = 'ลอง' + dRel(nd.date, d.now.date); sugs = nd.free.slice(0, 3).map(x => ({ d: nd.date, t: x })); }
+  } else if (free.indexOf(t) >= 0) {
+    S.pick = t; msg = '<i class="ti ti-check"></i> เวลานี้ว่าง'; cls = 'ok';
+  } else {
+    const m = toMin(t);
+    cls = 'warn';
+    if (free.length) {
+      const n = nearest(free, m, 3);
+      if (!S.pick || free.indexOf(S.pick) < 0) S.pick = n.best;
+      msg = 'เวลานี้มีคิวแล้ว · ใกล้ที่สุดที่ว่าง';
+      sugs = n.list.map(x => ({ d: S.day, t: x }));
+    } else {
+      const nd = d.days.find(x => x.date > S.day && !x.closed && x.free.length);
+      msg = 'วันนี้คิวเต็มแล้ว';
+      if (nd) {
+        msg += ' · ลอง' + dRel(nd.date, d.now.date);
+        sugs = nearest(nd.free, m, 3).list.map(x => ({ d: nd.date, t: x }));
+      }
+    }
+  }
+  const msgEl = $('#msg');
+  msgEl.className = 'msg ' + cls;
+  msgEl.innerHTML = msg;
+  $('#sugs').innerHTML = sugs.map(s => `
+    <button class="chip ${s.d === S.day && s.t === S.pick ? 'on' : ''}" data-d="${s.d}" data-t="${s.t}" style="font-size:18px">
+      ${s.t}${s.d !== S.day ? `<small>${dRel(s.d, d.now.date)}</small>` : ''}
+    </button>`).join('');
+  $('#sugs').style.display = sugs.length ? '' : 'none';
+  const ok = S.pick && free.indexOf(S.pick) >= 0;
+  $('#go').textContent = ok ? (S.resched ? 'เลื่อนเป็น ' : 'จองเวลา ') + S.pick : (S.resched ? 'เลื่อนคิว' : 'จองคิว');
+  $('#ego').textContent = '';
+}
+
+async function submit() {
+  const go = $('#go');
+  if (!S.pick || freeOf(S.day).indexOf(S.pick) < 0) { $('#ego').textContent = 'เลือกเวลาก่อน'; return; }
+  let name = '', phone = '';
+  if (!S.resched) {
+    if ($('#nm')) {
+      name = $('#nm').value.trim(); phone = $('#ph').value.replace(/\D/g, '');
+      let bad = false;
+      if (!name) { $('#enm').textContent = 'ใส่ชื่อก่อน'; bad = true; }
+      if (!/^0\d{8,9}$/.test(phone)) { $('#eph').textContent = 'ใส่เบอร์โทร 10 หลัก'; bad = true; }
+      if (bad) return;
+      store.set('k10_me', { name, phone });
+    } else {
+      const me = store.get('k10_me', {});
+      name = me.name; phone = me.phone;
+    }
+  }
+  go.classList.add('busy');
+  let res;
+  try {
+    res = await call('book', { date: S.day, time: S.pick, name, phone, token: S.resched ? S.resched.token : '' });
+  } catch (e) {
+    go.classList.remove('busy');
+    $('#ego').textContent = 'ส่งไม่สำเร็จ · ลองใหม่อีกครั้ง';
+    return;
+  }
+  go.classList.remove('busy');
+  if (res.ok) {
+    const toks = store.get('k10_tickets', []);
+    if (toks.indexOf(res.booking.token) < 0) toks.push(res.booking.token);
+    store.set('k10_tickets', toks);
+    S.time = ''; S.pick = null;
+    await load();
+    showTickets(res.booking.token);
+    toast(S.resched ? 'เลื่อนคิวแล้ว' : 'จองแล้ว');
+    return;
+  }
+  if (res.code === 'TAKEN') {
+    S.d.days = res.days; S.pick = null; evaluate();
+    $('#ego').textContent = res.msg;
+  } else if (res.code === 'PHONE' || res.code === 'DUP' || res.code === 'NAME') {
+    if (!$('#nm')) renderWho(true);
+    const msg = res.code === 'DUP' ? 'เบอร์นี้มีคิวอยู่แล้ว · ดูหรือเลื่อนได้จากตั๋วเดิม' : res.msg;
+    $(res.code === 'NAME' ? '#enm' : '#eph').textContent = msg;
+  } else {
+    $('#ego').textContent = res.msg;
+  }
+}
+
+/*** ---------- ตั๋ว ---------- ***/
+function calUrl(t) {
+  const p = ymd(t.date), s = toMin(t.time), e = s + (+t.dur || S.d.slotMin);
+  const f = m => '' + p[0] + ('0' + p[1]).slice(-2) + ('0' + p[2]).slice(-2) + 'T' + toHM(m).replace(':', '') + '00';
+  return 'https://calendar.google.com/calendar/render?action=TEMPLATE&ctz=Asia/Bangkok'
+    + '&text=' + encodeURIComponent('ตัดผม · ' + S.d.shop) + '&dates=' + f(s) + '/' + f(e);
+}
+
+function showTickets(focus) {
+  S.mode = 'ticket';
+  const d = S.d;
+  if (!d.tickets.length) return showBook();
+  $('#app').innerHTML = d.tickets.map(t => `
+    <div class="card" style="margin-bottom:16px${focus && focus !== t.token ? ';opacity:.75' : ''}">
+      <div class="tk-top">
+        <i class="ti ti-scissors au" style="font-size:20px"></i>
+        <div class="sv" style="font-size:19px;margin-top:6px">${esc(d.shop)}</div>
+        <div class="sv au tk-time">${esc(t.time)}</div>
+        <div class="mu">${dLong(t.date)}</div>
+        <div style="margin-top:12px">${esc(t.name)}</div>
+      </div>
+      <div class="tk-bar">
+        <a href="${calUrl(t)}" target="_blank" aria-label="เพิ่มลงปฏิทิน"><i class="ti ti-calendar-plus"></i></a>
+        ${d.mapUrl ? `<a href="${esc(d.mapUrl)}" target="_blank" aria-label="แผนที่ร้าน"><i class="ti ti-map-pin"></i></a>` : ''}
+        ${d.phone ? `<a href="tel:${esc(d.phone)}" aria-label="โทรหาร้าน"><i class="ti ti-phone"></i></a>` : ''}
+        <button data-a="link" data-k="${t.token}" aria-label="คัดลอกลิงก์ตั๋ว"><i class="ti ti-link"></i></button>
+        <button data-a="move" data-k="${t.token}" aria-label="เลื่อนคิว"><i class="ti ti-pencil"></i></button>
+        <button data-a="cancel" data-k="${t.token}" aria-label="ยกเลิกคิว"><i class="ti ti-x"></i></button>
+      </div>
+    </div>`).join('') + `
+    <div class="mu" style="text-align:center;margin:4px 0 18px">เปิดหน้านี้อีกครั้งเพื่อเลื่อนหรือยกเลิก · กด <i class="ti ti-link"></i> เก็บลิงก์ตั๋วไว้</div>
+    <button class="btn line" data-a="new"><i class="ti ti-plus"></i> จองคิวให้อีกคน</button>
+    <button class="link" data-a="mem" style="margin-top:6px"><i class="ti ti-id-badge-2"></i> บัตรสมาชิก · ดูแต้ม</button>`;
+  $('#app').onclick = async e => {
+    const b = e.target.closest('[data-a]'); if (!b) return;
+    const t = d.tickets.find(x => x.token === b.dataset.k);
+    if (b.dataset.a === 'new') { store.del('k10_me'); return showBook(); }
+    if (b.dataset.a === 'mem') return showMember();
+    if (b.dataset.a === 'link') return copyText(d.url + '?t=' + t.token);
+    if (b.dataset.a === 'move') {
+      $('#app').innerHTML = '<div class="load"><i class="ti ti-scissors"></i></div>';
+      if (!await load(t.token)) return;
+      S.day = t.date; S.time = ''; S.pick = null;
+      return showBook(t);
+    }
+    if (b.dataset.a === 'cancel') {
+      askConfirm(`ยกเลิกคิว ${dShort(t.date)} ${t.time}?`, 'ยกเลิกคิว', async () => {
+        try {
+          await call('cancelBooking', t.token);
+          await load();
+          toast('ยกเลิกแล้ว');
+          S.d.tickets.length ? showTickets() : showBook();
+        } catch (err) { toast('ยกเลิกไม่สำเร็จ'); }
+      });
+    }
+  };
+}
+
+/*** ---------- บัตรสมาชิก ---------- ***/
+function showMember() {
+  S.mode = 'member';
+  const me = store.get('k10_me', {}), back = S.d.tickets.length ? showTickets : showBook;
+  $('#app').onclick = null;
+  $('#app').innerHTML = `
+    <div class="head"><span class="sv brand">${esc(S.d.shop)}</span><span class="mu">สมาชิก</span></div>
+    <div class="field"><i class="ti ti-phone"></i><input id="mp" placeholder="เบอร์โทรที่ใช้จอง" inputmode="tel" maxlength="12" value="${esc(me.phone || store.get('k10_mphone', ''))}">
+      <button id="mgo" class="au" style="font-size:20px;padding:6px" aria-label="ดูแต้ม"><i class="ti ti-arrow-right"></i></button></div>
+    <div class="err" id="merr"></div>
+    <div id="mcard" style="margin-top:18px"></div>
+    <button class="link" id="mback" style="margin-top:10px">กลับ</button>`;
+  const go = async () => {
+    const ph = $('#mp').value.replace(/\D/g, '');
+    $('#merr').textContent = '';
+    if (!/^0\d{8,9}$/.test(ph)) { $('#merr').textContent = 'ใส่เบอร์โทร 10 หลัก'; return; }
+    $('#mcard').innerHTML = '<div class="load" style="padding:30px 0"><i class="ti ti-scissors"></i></div>';
+    let r;
+    try { r = await call('getMember', ph); } catch (e) { $('#mcard').innerHTML = ''; $('#merr').textContent = 'โหลดไม่สำเร็จ · ลองใหม่'; return; }
+    if (!r.ok) { $('#mcard').innerHTML = ''; $('#merr').textContent = r.msg; return; }
+    store.set('k10_mphone', ph);
+    const m = r.member;
+    $('#mcard').innerHTML = (r.isNew
+      ? `<div class="card" style="padding:22px 18px;text-align:center"><i class="ti ti-scissors au" style="font-size:22px"></i>
+          <div style="margin-top:8px">ยังไม่มีแต้ม</div><div class="mu">มาตัดครั้งแรก รับ +${m.tier.earn} แต้ม · สมัครให้อัตโนมัติด้วยเบอร์นี้</div></div>`
+      : memberCard(m)) +
+      (r.rewards.length ? `<div class="mu" style="margin:18px 0 8px"><i class="ti ti-gift"></i> รางวัล</div>${rewardList(r.rewards, m.points, false)}
+        <div class="mu" style="text-align:center;margin-top:8px">แลกที่ร้าน · แจ้งช่างตอนมาตัด</div>` : '');
+  };
+  $('#mgo').onclick = go;
+  $('#mp').onkeydown = e => { if (e.key === 'Enter') go(); };
+  $('#mback').onclick = () => back();
+  if ($('#mp').value) go();
+}
+
+start();
+</script>
+</body>
+</html>

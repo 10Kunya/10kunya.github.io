@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>๑๐ กันยา · ช่าง</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=IBM+Plex+Sans+Thai:wght@400;500&family=Noto+Serif+Thai:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" rel="stylesheet">
+<style>
+:root{
+  color-scheme: dark;
+  --bg:#141210; --card:#1B1815; --gold-bg:#1E1A15;
+  --line:#221F1B; --line2:#2E2925; --gold-line:#6B5A3E;
+  --text:#E6DFD4; --mute:#857C70; --dim:#4A443D;
+  --gold:#C9A66B; --warn:#C49384; --ok:#9DB58A;
+  --sans:'IBM Plex Sans Thai',system-ui,sans-serif;
+  --serif:'Cormorant Garamond','Noto Serif Thai',Georgia,serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.55}
+button,input,select{font:inherit;color:inherit}
+button{background:none;border:0;padding:0;cursor:pointer}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:440px;margin:0 auto;padding:22px 20px calc(96px + env(safe-area-inset-bottom))}
+.sv{font-family:var(--serif);font-variant-numeric:lining-nums tabular-nums;font-weight:500}
+.mu{color:var(--mute);font-size:13px}
+.au{color:var(--gold)}
+.ti{vertical-align:-2px}
+
+.head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:22px}
+.brand{font-size:24px;letter-spacing:.5px}
+
+.chips{display:grid;gap:8px}
+.chip{border:1px solid var(--line2);border-radius:10px;padding:9px 0;text-align:center;transition:border-color .15s,background .15s}
+.chip.on{border-color:var(--gold);background:var(--gold-bg);color:var(--gold)}
+.chip.off{color:var(--dim);border-style:dashed;cursor:default}
+.chip small{display:block;color:var(--mute);font-size:12px}
+.chip.on small{color:var(--gold)}
+
+.row{display:flex;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid var(--line)}
+.field{display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line2);padding:4px 0}
+.field i{color:var(--mute);font-size:18px}
+.field input{flex:1;background:transparent;border:0;outline:0;padding:10px 0;font-size:16px}
+.field input::placeholder{color:var(--dim)}
+.field:focus-within{border-color:var(--gold-line)}
+.err{color:var(--warn);font-size:13px;min-height:0;margin-top:4px}
+.err:empty{display:none}
+
+.btn{display:block;width:100%;background:var(--gold);color:var(--bg);border-radius:12px;padding:14px;text-align:center;font-weight:500;font-size:16px}
+.btn:active{transform:scale(.98)}
+.btn.line{background:transparent;color:var(--text);border:1px solid var(--line2)}
+.btn.busy{opacity:.6;pointer-events:none}
+.link{color:var(--mute);font-size:14px;text-align:center;display:block;width:100%;padding:12px}
+
+.card{border:1px solid var(--gold-line);border-radius:14px}
+.ring{width:46px;height:46px;border-radius:50%;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:21px;flex-shrink:0}
+
+.nav{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--line);padding:10px 0 calc(10px + env(safe-area-inset-bottom))}
+.nav div{max-width:440px;margin:0 auto;display:flex;justify-content:space-around}
+.nav button{font-size:23px;color:var(--dim);padding:6px 16px}
+.nav button.on{color:var(--gold)}
+
+.shade{position:fixed;inset:0;background:rgba(8,7,6,.7);display:flex;align-items:flex-end;justify-content:center;z-index:20;animation:fade .15s}
+.sheet{background:var(--card);border:1px solid var(--line2);border-bottom:0;border-radius:20px 20px 0 0;width:100%;max-width:440px;padding:22px 20px calc(22px + env(safe-area-inset-bottom));max-height:88vh;overflow:auto;animation:up .2s ease-out}
+.sheet h3{margin:0 0 14px;font-weight:500;font-size:20px}
+.act{display:flex;align-items:center;gap:14px;width:100%;padding:14px 2px;border-bottom:1px solid var(--line);text-align:left;font-size:16px}
+.act i{font-size:20px;color:var(--mute);width:22px}
+.act.gold i,.act.gold{color:var(--gold)}
+.act.warn i,.act.warn{color:var(--warn)}
+.act:last-child{border-bottom:0}
+
+.badge{display:inline-flex;align-items:center;gap:5px;border:1px solid;border-radius:20px;padding:2px 10px;font-size:12px;white-space:nowrap}
+.bar{height:4px;background:var(--line2);border-radius:2px;margin:6px 0 4px;overflow:hidden}
+.bar div{height:100%;background:var(--gold);border-radius:2px}
+.rw{border:1px solid var(--line2);border-radius:12px;padding:11px 14px;display:flex;align-items:center;gap:12px;margin-bottom:8px;width:100%;text-align:left}
+.rw i{font-size:18px}
+.rw.dim{opacity:.5}
+.rw.can{border-color:var(--gold-line)}
+
+.toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 18px;border-radius:24px;font-size:14px;z-index:30;animation:fade .15s;white-space:nowrap}
+.load{display:flex;justify-content:center;padding:80px 0;color:var(--dim);font-size:26px}
+.load i{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fade{from{opacity:0}}
+@keyframes up{from{transform:translateY(30px);opacity:0}}
+</style>
+
+<style>
+.stats{display:flex;gap:26px;margin-bottom:18px;font-size:22px;color:var(--mute)}
+.stats .ti{font-size:22px}
+.now{display:flex;align-items:center;gap:14px;padding:16px;margin-bottom:10px}
+.tl{font-size:28px;width:88px;flex-shrink:0}
+.nm{font-size:21px}
+#app .row{padding:15px 0}
+.r-free,.r-block{color:var(--dim)}
+.r-done .tl,.r-done .nm,.r-noshow .tl,.r-noshow .nm{color:var(--mute)}
+.r-noshow .nm{text-decoration:line-through}
+.r-late .tl{color:var(--warn)}
+.row .ic{font-size:26px;color:var(--mute)}
+.row.r-free .ic,.row.r-block .ic{color:var(--dim)}
+.dnav{display:flex;align-items:center;gap:4px}
+.dnav button{color:var(--mute);font-size:20px;padding:4px 6px}
+.dots{display:flex;justify-content:center;gap:14px;min-height:14px}
+.dots span{width:12px;height:12px;border-radius:50%;border:1px solid var(--gold-line)}
+.dots span.on{background:var(--gold);border-color:var(--gold)}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:270px;margin:0 auto}
+.pad button{aspect-ratio:1;border:1px solid var(--line2);border-radius:50%;font-family:var(--serif);font-variant-numeric:lining-nums;font-size:28px}
+.pad button:active{background:var(--gold-bg);border-color:var(--gold-line)}
+.pad .ok{color:var(--gold);border-color:var(--gold-line);font-size:24px}
+.pad .del{border:0;color:var(--mute);font-size:24px}
+.stp{display:inline-flex;align-items:center;gap:2px}
+.stp button{width:26px;height:26px;border:1px solid var(--line2);border-radius:50%;color:var(--mute);font-size:14px}
+.stp b{font-family:var(--serif);font-variant-numeric:lining-nums;font-weight:500;font-size:17px;color:var(--gold);min-width:30px;text-align:center}
+.set .row{gap:12px}
+.set .row > i{color:var(--mute);font-size:19px}
+.set .row > span{flex:1}
+.set select{background:transparent;border:0;outline:0;font-family:var(--serif);font-variant-numeric:lining-nums tabular-nums;font-size:19px;color:var(--gold);text-align:right}
+.set input[type=date]{background:transparent;border:0;outline:0}
+.set select option{background:var(--card);color:var(--text)}
+.step{display:flex;align-items:center;gap:14px}
+.step button{width:32px;height:32px;border:1px solid var(--line2);border-radius:50%;color:var(--mute)}
+.hol{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line2);border-radius:20px;padding:4px 8px 4px 12px;margin:0 6px 6px 0;font-size:13px}
+.hol button{color:var(--mute);font-size:15px}
+.ed{display:flex;align-items:center;gap:8px;border:1px solid var(--line2);border-radius:12px;padding:8px 10px;margin-bottom:8px}
+.ed input{background:transparent;border:0;border-bottom:1px solid var(--line2);outline:0;padding:4px 2px;min-width:0;font-size:15px}
+.ed input.n{width:44px;text-align:center;font-family:var(--serif);font-variant-numeric:lining-nums;font-size:17px;color:var(--gold)}
+.ed .x{color:var(--mute);font-size:17px;padding:4px}
+.ed small{color:var(--mute);font-size:11px;white-space:nowrap}
+.ed:focus-within{border-color:var(--gold-line)}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="load"><i class="ti ti-scissors"></i></div></div>
+<div class="nav" id="nav" style="display:none"><div>
+  <button data-v="list" aria-label="คิว"><i class="ti ti-list"></i></button>
+  <button data-v="add" aria-label="เพิ่มคิว"><i class="ti ti-plus"></i></button>
+  <button data-v="mem" aria-label="สมาชิก"><i class="ti ti-users"></i></button>
+  <button data-v="share" aria-label="ลิงก์ลูกค้า"><i class="ti ti-share"></i></button>
+  <button data-v="set" aria-label="ตั้งค่า"><i class="ti ti-adjustments-horizontal"></i></button>
+</div></div>
+<script>
+const $ = (s, el) => (el || document).querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const toMin = t => { const p = String(t).split(':'); return (+p[0]) * 60 + (+p[1]); };
+const toHM = m => ('0' + Math.floor(m / 60)).slice(-2) + ':' + ('0' + (m % 60)).slice(-2);
+
+const WD = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+const WD_FULL = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+const MO = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+const MO_FULL = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+const ymd = ds => ds.split('-').map(Number);
+const wday = ds => { const p = ymd(ds); return new Date(Date.UTC(p[0], p[1] - 1, p[2])).getUTCDay(); };
+const addDays = (ds, n) => { const p = ymd(ds); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10); };
+const dShort = ds => WD[wday(ds)] + ' ' + ymd(ds)[2] + ' ' + MO[ymd(ds)[1] - 1];
+const dLong = ds => 'วัน' + WD_FULL[wday(ds)] + ' ' + ymd(ds)[2] + ' ' + MO_FULL[ymd(ds)[1] - 1];
+function dRel(ds, today) {
+  const n = Math.round((Date.parse(ds) - Date.parse(today)) / 864e5);
+  return n === 0 ? 'วันนี้' : n === 1 ? 'พรุ่งนี้' : n === 2 ? 'มะรืน' : WD[wday(ds)];
+}
+function closedText(days) {
+  if (!days || !days.length) return 'เปิดทุกวัน';
+  return 'หยุดวัน' + days.slice().sort().map(d => WD_FULL[d]).join(' ');
+}
+
+// เรียก Apps Script แบบไม่ส่งคุกกี้ Google (กันปัญหามือถือที่ล็อกอินหลายบัญชี)
+const API_URL = 'https://script.google.com/macros/s/AKfycbxikYAE-wSNLOwdfVX2vK9Em2K1RQ-oap9v9WsbMzxUCD0PcSSpfxBRWHtXtjoZhPW8/exec';
+async function call(fn, ...args) {
+  const r = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ fn: fn, args: args }), credentials: 'omit' });
+  const j = await r.json();
+  if (j.error) throw new Error(j.error);
+  return j.result;
+}
+
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} }
+};
+
+let toastT;
+function toast(msg) {
+  let el = $('.toast');
+  if (!el) { el = document.createElement('div'); el.className = 'toast'; document.body.appendChild(el); }
+  el.textContent = msg;
+  clearTimeout(toastT);
+  toastT = setTimeout(() => el.remove(), 2400);
+}
+
+function openSheet(html, onClick) {
+  closeSheet();
+  const sh = document.createElement('div');
+  sh.className = 'shade';
+  sh.innerHTML = '<div class="sheet">' + html + '</div>';
+  sh.addEventListener('click', e => {
+    if (e.target === sh) return closeSheet();
+    const b = e.target.closest('[data-a]');
+    if (b && onClick) onClick(b.dataset.a, b, sh);
+  });
+  document.body.appendChild(sh);
+  return sh;
+}
+function closeSheet() { const s = $('.shade'); if (s) s.remove(); }
+
+function askConfirm(title, okText, cb) {
+  openSheet('<h3>' + esc(title) + '</h3>' +
+    '<button class="btn" data-a="yes" style="margin-top:6px">' + esc(okText) + '</button>' +
+    '<button class="link" data-a="no">ไม่ใช่</button>',
+    a => { closeSheet(); if (a === 'yes') cb(); });
+}
+
+/*** ---------- บัตรสมาชิก (ใช้ทั้งหน้าลูกค้าและหน้าช่าง) ---------- ***/
+const TIER_C = ['#B98260', '#C8C9CC', '#C9A66B', '#A9C3D9', '#C9B3DD'];
+function tierBadge(t) {
+  const c = TIER_C[t.idx % TIER_C.length];
+  const ic = t.count > 1 && t.idx === t.count - 1 ? 'ti-crown' : 'ti-medal';
+  return `<span class="badge" style="border-color:${c};color:${c}"><i class="ti ${ic}"></i> ${esc(t.name)}</span>`;
+}
+function memberCard(m) {
+  const t = m.tier, nx = t.next;
+  const pct = nx ? Math.max(0, Math.min(100, Math.round((m.lifetime - t.min) / (nx.min - t.min) * 100))) : 100;
+  return `<div class="card" style="padding:16px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+      <span class="mu" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.name || 'สมาชิก')} · ${esc(m.phone)}</span>${tierBadge(t)}
+    </div>
+    <div style="display:flex;align-items:baseline;gap:6px;margin:8px 0 2px">
+      <span class="sv au" style="font-size:44px;line-height:1">${m.points}</span><span class="mu">แต้มใช้ได้</span>
+    </div>
+    <div class="mu" style="margin-bottom:14px">ตัด 1 ครั้ง ได้ <span class="au">+${t.earn}</span> แต้ม · มาแล้ว ${m.visits} ครั้ง</div>
+    <div style="display:flex;justify-content:space-between" class="mu"><span>สะสมรวม ${m.lifetime}</span><span>${nx ? esc(nx.name) + ' ' + nx.min : 'ระดับสูงสุด'}</span></div>
+    <div class="bar"><div style="width:${pct}%"></div></div>
+    <div class="mu">${nx ? `อีก ${nx.min - m.lifetime} แต้ม ขึ้นระดับ${esc(nx.name)}` : 'ได้แต้มต่อครั้งสูงสุดแล้ว'}</div>
+  </div>`;
+}
+function rewardList(rewards, points, clickable) {
+  if (!rewards.length) return '';
+  return rewards.map((r, i) => {
+    const can = points >= r.cost;
+    const tag = clickable ? 'button' : 'div';
+    return `<${tag} class="rw ${can ? 'can' : 'dim'}" ${clickable && can ? `data-a="redeem" data-i="${i}"` : ''}>
+      <i class="ti ti-${esc(r.icon)} ${can ? 'au' : ''}"></i><span style="flex:1">${esc(r.name)}</span>
+      <span class="sv ${can ? 'au' : ''}" style="font-size:17px">${r.cost}</span></${tag}>`;
+  }).join('');
+}
+
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); toast('คัดลอกแล้ว'); }
+  catch (e) {
+    const sh = openSheet('<h3>คัดลอกลิงก์</h3><div class="field"><input readonly value="' + esc(text) + '"></div>' +
+      '<button class="link" data-a="x">ปิด</button>', () => closeSheet());
+    const i = $('input', sh); i.focus(); i.select();
+  }
+}
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script>
+const B = { sess: store.get('k10_sess', ''), date: '', d: null, set: null, view: 'list', timer: null };
+
+async function api(fn, ...args) {
+  try { return await call(fn, B.sess, ...args); }
+  catch (e) {
+    if (String(e && e.message || e).indexOf('AUTH') >= 0) { store.del('k10_sess'); B.sess = ''; showLogin(); throw e; }
+    toast('เชื่อมต่อไม่สำเร็จ'); throw e;
+  }
+}
+
+/*** ---------- แป้นตัวเลข PIN ---------- ***/
+function padHtml(title) {
+  return `<div class="mu" id="kt" style="margin-bottom:16px">${esc(title)}</div>
+    <div class="dots" id="kd"></div><div class="err" id="ke" style="min-height:20px;margin:10px 0 14px;display:block"></div>
+    <div class="pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button data-k="${n}">${n}</button>`).join('')}
+      <button data-k="ok" class="ok" aria-label="ตกลง"><i class="ti ti-check"></i></button><button data-k="0">0</button>
+      <button data-k="del" class="del" aria-label="ลบ"><i class="ti ti-backspace"></i></button></div>`;
+}
+// onOk(ค่า, pad) — pad.reset(หัวข้อใหม่, ข้อความผิดพลาด) เพื่อเริ่มใส่ใหม่
+function bindPad(root, onOk) {
+  let v = '', busy = false;
+  const dots = () => { $('#kd', root).innerHTML = Array.from({ length: Math.max(4, v.length) }, (_, i) => `<span class="${i < v.length ? 'on' : ''}"></span>`).join(''); };
+  const pad = {
+    reset(title, err) { v = ''; busy = false; if (title) $('#kt', root).textContent = title; $('#ke', root).textContent = err || ''; dots(); },
+    wait(msg) { busy = true; $('#ke', root).textContent = msg; }
+  };
+  root.addEventListener('click', async e => {
+    const b = e.target.closest('[data-k]'); if (!b || busy) return;
+    const k = b.dataset.k;
+    if (k === 'ok') {
+      if (v.length < 4) { $('#ke', root).textContent = 'PIN 4–8 หลัก'; return; }
+      return onOk(v, pad);
+    }
+    if (k === 'del') v = v.slice(0, -1); else if (v.length < 8) v += k;
+    $('#ke', root).textContent = '';
+    dots();
+  });
+  dots();
+  return pad;
+}
+
+/*** ---------- เข้าสู่ระบบ ---------- ***/
+async function showLogin() {
+  clearInterval(B.timer);
+  $('#nav').style.display = 'none';
+  const st = await call('barberStatus');
+  const first = !st.hasPin, t1 = first ? 'ตั้ง PIN สำหรับช่าง (4–8 หลัก)' : 'ใส่ PIN';
+  $('#app').innerHTML = `<div id="pr" style="text-align:center;padding-top:36px">
+      <i class="ti ti-scissors au" style="font-size:26px"></i>
+      <div class="sv brand" style="margin:8px 0 18px">${esc(st.shop)}</div>${padHtml(t1)}</div>`;
+  let firstVal = '';
+  bindPad($('#pr'), async (v, pad) => {
+    if (first && !firstVal) { firstVal = v; return pad.reset('ใส่ PIN อีกครั้ง'); }
+    if (first && v !== firstVal) { firstVal = ''; return pad.reset(t1, 'PIN สองครั้งไม่ตรงกัน'); }
+    pad.wait('กำลังตรวจ…');
+    const r = await call(first ? 'barberSetPin' : 'barberLogin', v).catch(() => ({ ok: false, msg: 'เชื่อมต่อไม่สำเร็จ' }));
+    if (!r.ok) { firstVal = ''; return pad.reset(first ? t1 : null, r.msg); }
+    B.sess = r.sess; store.set('k10_sess', r.sess);
+    boot();
+  });
+}
+
+/*** ---------- คิววันนี้ ---------- ***/
+async function boot() {
+  if (!B.sess) return showLogin();
+  $('#nav').style.display = '';
+  try { await loadDay(B.date); } catch (e) { return; }
+  keepAwake();
+  clearInterval(B.timer);
+  B.timer = setInterval(() => { if (B.view === 'list' && !$('.shade')) loadDay(B.date).catch(() => {}); }, 60000);
+}
+
+// ให้จอติดค้างไว้ ช่างมองคิวจากไกลได้ (ถ้าเบราว์เซอร์ไม่ยอมก็ข้ามไปเงียบ ๆ)
+let wakeLock = null;
+async function keepAwake() {
+  try { if ('wakeLock' in navigator && !wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.onrelease = () => { wakeLock = null; }; } } catch (e) {}
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && B.sess) { keepAwake(); if (B.view === 'list') loadDay(B.date).catch(() => {}); } });
+
+async function loadDay(date) {
+  B.d = await api('barberDay', date || '');
+  B.date = B.d.date;
+  if (B.view === 'list') renderList();
+}
+
+function isToday() { return B.d.date === B.d.today; }
+
+// รวมคิวกับช่วงว่างเป็นเส้นเวลาเดียว
+function timeline() {
+  const d = B.d, items = d.rows.map(r => Object.assign({ kind: r.status }, r));
+  const today = isToday(), past = d.date < d.today;
+  if (!past) d.free.forEach(t => {
+    if (today && toMin(t) + d.slotMin <= d.nowMin) return;
+    items.push({ kind: 'free', time: t });
+  });
+  return items.sort((a, b) => a.time.localeCompare(b.time));
+}
+
+function currentRow() {
+  if (!isToday()) return null;
+  const n = B.d.nowMin, bk = B.d.rows.filter(r => r.status === 'booked');
+  const cur = bk.find(r => toMin(r.time) <= n && n < toMin(r.time) + r.dur);
+  if (cur) return { r: cur, label: 'ตอนนี้' };
+  const next = bk.find(r => toMin(r.time) >= n);
+  return next ? { r: next, label: 'ถัดไป' } : null;
+}
+
+function renderList() {
+  B.view = 'list'; navOn('list');
+  const d = B.d, rows = d.rows;
+  const total = rows.filter(r => r.status !== 'block').length;
+  const done = rows.filter(r => r.status === 'done').length;
+  const wait = rows.filter(r => r.status === 'booked').length;
+  const cur = currentRow();
+  const items = timeline();
+  $('#app').innerHTML = `
+    <div class="head">
+      <span class="sv brand">๑๐ กันยา</span>
+      <span class="dnav">
+        <button data-a="prev" aria-label="วันก่อน"><i class="ti ti-chevron-left"></i></button>
+        <button data-a="today" class="mu" style="font-size:18px;color:${isToday() ? 'var(--gold)' : 'var(--text)'}">${isToday() ? 'วันนี้' : dShort(d.date)}</button>
+        <button data-a="next" aria-label="วันถัดไป"><i class="ti ti-chevron-right"></i></button>
+      </span>
+    </div>
+    <div class="stats">
+      <span title="ทั้งหมด"><i class="ti ti-users"></i> ${total}</span>
+      <span title="เสร็จ"><i class="ti ti-check"></i> ${done}</span>
+      <span title="รอ" class="au"><i class="ti ti-hourglass"></i> ${wait}</span>
+      ${d.closed ? '<span style="margin-left:auto;color:var(--warn)"><i class="ti ti-calendar-off"></i> วันหยุด</span>' : ''}
+    </div>
+    ${cur ? `
+    <div class="card now">
+      <div style="flex:1;min-width:0" data-a="row" data-id="${cur.r.id}">
+        <div class="mu" style="font-size:17px">${cur.label}</div>
+        <div class="sv au" style="font-size:64px;line-height:1.1">${esc(cur.r.time)}</div>
+        <div style="font-size:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(cur.r.name)}${cur.r.phone ? ' <span class="mu">· ' + esc(cur.r.phone) + '</span>' : ''}</div>
+      </div>
+      <button class="ring" data-a="done" data-id="${cur.r.id}" aria-label="เสร็จ" style="width:72px;height:72px;font-size:32px"><i class="ti ti-check"></i></button>
+    </div>` : ''}
+    <div>${items.length ? items.map(rowHtml).join('') : '<div class="mu" style="text-align:center;padding:40px 0">ไม่มีคิว</div>'}</div>`;
+}
+
+function rowHtml(r) {
+  const late = r.kind === 'booked' && (B.d.date < B.d.today || (isToday() && toMin(r.time) + r.dur <= B.d.nowMin));
+  const icon = {
+    booked: late ? 'ti-alert-circle' : 'ti-hourglass', done: 'ti-check', noshow: 'ti-user-x',
+    block: 'ti-lock', free: 'ti-plus'
+  }[r.kind];
+  const name = r.kind === 'free' ? 'ว่าง' : r.kind === 'block' ? 'ปิด' :
+    esc(r.name) + (r.source === 'walkin' ? ' <i class="ti ti-walk mu" style="font-size:14px"></i>' : '');
+  return `<div class="row r-${r.kind}${late ? ' r-late' : ''}" data-a="row" data-id="${r.id || ''}" data-t="${r.time}" style="cursor:pointer">
+    <span class="sv tl">${esc(r.time)}</span>
+    <span class="nm" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</span>
+    <i class="ti ${icon} ic"></i></div>`;
+}
+
+$('#app').addEventListener('click', async e => {
+  if (B.view !== 'list') return;
+  const b = e.target.closest('[data-a]'); if (!b) return;
+  const a = b.dataset.a;
+  if (a === 'prev' || a === 'next') return loadDay(addDays(B.d.date, a === 'prev' ? -1 : 1)).catch(() => {});
+  if (a === 'today') return loadDay('').catch(() => {});
+  if (a === 'done') return act({ action: 'done', id: b.dataset.id }, 'เสร็จแล้ว');
+  if (a === 'row') {
+    if (b.dataset.id) {
+      const r = B.d.rows.find(x => x.id === b.dataset.id);
+      if (!r) { toast('ข้อมูลเปลี่ยน · โหลดใหม่'); return loadDay(B.date).catch(() => {}); }
+      return rowSheet(r);
+    }
+    return addSheet(b.dataset.t);
+  }
+});
+
+async function act(p, msg) {
+  closeSheet();
+  let r;
+  try { r = await api('barberAction', p); } catch (e) { return; }
+  if (!r.ok) return toast(r.msg);
+  B.d = r.day; B.date = r.day.date;
+  if (r.points) B.recent = null;
+  renderList();
+  if (r.points) msg += ` · +${r.points.earn} แต้ม (รวม ${r.points.member.points})`;
+  if (msg) toast(msg);
+}
+
+function rowSheet(r) {
+  if (!r) return;
+  const head = `<h3><span class="sv au" style="font-size:24px">${esc(r.time)}</span> &nbsp;${esc(r.name || 'ปิดช่วงเวลา')}</h3>`;
+  let acts = '';
+  if (r.status === 'booked') acts =
+    (r.phone ? `<a class="act" href="tel:${esc(r.phone)}"><i class="ti ti-phone"></i>${esc(r.phone)}</a>` : '') +
+    '<button class="act gold" data-a="done"><i class="ti ti-check"></i>เสร็จ</button>' +
+    '<button class="act" data-a="noshow"><i class="ti ti-user-x"></i>ไม่มา</button>' +
+    '<button class="act" data-a="move"><i class="ti ti-arrows-exchange"></i>เลื่อนเวลา</button>' +
+    '<button class="act warn" data-a="cancel"><i class="ti ti-x"></i>ยกเลิกคิว</button>';
+  else if (r.status === 'block') acts = '<button class="act gold" data-a="unblock"><i class="ti ti-lock-open"></i>เปิดรับคิวช่วงนี้</button>';
+  else acts =
+    (r.phone ? `<a class="act" href="tel:${esc(r.phone)}"><i class="ti ti-phone"></i>${esc(r.phone)}</a>` : '') +
+    '<button class="act" data-a="booked"><i class="ti ti-arrow-back-up"></i>กลับเป็นรอคิว</button>';
+  openSheet(head + acts, a => {
+    if (a === 'move') return moveSheet(r, B.d.date);
+    if (a === 'cancel') return askConfirm(`ยกเลิกคิว ${r.time} ${r.name}?`, 'ยกเลิกคิว', () => act({ action: 'cancel', id: r.id }, 'ยกเลิกแล้ว'));
+    act({ action: a, id: r.id }, { done: 'เสร็จแล้ว', noshow: 'บันทึกว่าไม่มา', unblock: 'เปิดรับคิวแล้ว', booked: 'กลับเป็นรอคิวแล้ว' }[a]);
+  });
+}
+
+function freeAhead(day) {
+  const today = day.date === day.today;
+  return day.free.filter(t => !today || toMin(t) + day.slotMin > day.nowMin);
+}
+
+function slotChips(list, pick) {
+  if (!list.length) return '<div class="mu" style="padding:10px 0 4px">ไม่มีช่วงว่าง</div>';
+  return '<div class="chips sv" style="grid-template-columns:repeat(4,1fr);margin-bottom:6px">' +
+    list.map(t => `<button class="chip ${t === pick ? 'on' : ''}" data-a="pick" data-t="${t}" style="font-size:17px">${t}</button>`).join('') + '</div>';
+}
+
+// ปุ่มวัน 7 วันที่ร้านเปิด นับจากวันนี้
+function openDays(sel) {
+  const d = B.d, out = [];
+  for (let i = 0; out.length < 7 && i < 30; i++) {
+    const ds = addDays(d.today, i);
+    if (d.closedDays.indexOf(wday(ds)) < 0 && d.holidays.indexOf(ds) < 0) out.push(ds);
+  }
+  if (sel && out.indexOf(sel) < 0) out.unshift(sel);
+  return out;
+}
+function dayChips(sel) {
+  return '<div class="chips" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px">' + openDays(sel).map(ds =>
+    `<button class="chip ${ds === sel ? 'on' : ''}" data-a="day" data-d="${ds}">${ds === B.d.today ? 'วันนี้' : WD[wday(ds)]}<small>${ymd(ds)[2]} ${MO[ymd(ds)[1] - 1]}</small></button>`).join('') + '</div>';
+}
+async function dayData(date) { return date === B.d.date ? B.d : api('barberDay', date).catch(() => null); }
+
+async function moveSheet(r, date) {
+  const day = await dayData(date);
+  if (!day) return;
+  openSheet(`<h3>เลื่อน ${esc(r.name)}</h3>${dayChips(day.date)}${slotChips(freeAhead(day), '')}`, (a, b) => {
+    if (a === 'day') return moveSheet(r, b.dataset.d);
+    if (a === 'pick') act({ action: 'move', id: r.id, date: day.date, time: b.dataset.t }, 'เลื่อนเป็น ' + b.dataset.t);
+  });
+}
+
+async function addSheet(time, date) {
+  date = date || (B.d.date < B.d.today ? B.d.today : B.d.date);
+  const day = await dayData(date);
+  if (!day) return;
+  if (!B.recent) B.recent = (await api('barberMembers', '').catch(() => [])).slice(0, 8);
+  const free = freeAhead(day);
+  const st = { pick: free.indexOf(time) >= 0 ? time : '', who: null, find: false };   // who = null คือไม่ระบุชื่อ
+  const foundHtml = () => (st.found || []).map(m => `<button class="chip" data-a="pickm" data-p="${esc(m.phone)}">${esc(m.name || '—')}<small>${esc(m.phone)}</small></button>`).join('');
+  const html = () => `<h3>เพิ่มคิว</h3>${dayChips(day.date)}${slotChips(free, st.pick)}
+    <div class="mu" style="margin:12px 0 8px"><i class="ti ti-users"></i> ลูกค้า</div>
+    <div class="chips" style="grid-template-columns:repeat(2,1fr);margin-bottom:8px">
+      <button class="chip ${!st.who && !st.find ? 'on' : ''}" data-a="walk"><i class="ti ti-walk"></i> ไม่ระบุ</button>
+      <button class="chip ${st.find ? 'on' : ''}" data-a="find"><i class="ti ti-search"></i> ค้นหา / ใหม่</button>
+      ${B.recent.map(m => `<button class="chip ${st.who && st.who.phone === m.phone ? 'on' : ''}" data-a="who" data-p="${esc(m.phone)}">${esc(m.name || m.phone)}<small>${esc(m.phone.slice(-4))}</small></button>`).join('')}
+    </div>
+    ${st.find ? `<div class="field"><i class="ti ti-search"></i><input id="fq" value="${esc(st.q || '')}" placeholder="เบอร์ (4 ตัวท้ายก็ได้) หรือชื่อ" autocomplete="off"></div>
+      <div id="fr" class="chips" style="grid-template-columns:repeat(2,1fr);margin:8px 0">${foundHtml()}</div>
+      <div class="mu" style="margin-top:4px">ลูกค้าใหม่</div>
+      <div class="field"><i class="ti ti-user"></i><input id="an" value="${esc(st.nn || '')}" placeholder="ชื่อ" maxlength="40"></div>
+      <div class="field"><i class="ti ti-phone"></i><input id="ap" value="${esc(st.np || '')}" placeholder="เบอร์โทร" inputmode="tel" maxlength="12"></div>` : ''}
+    <div class="err" id="aerr"></div>
+    <button class="btn" data-a="walkin" style="margin-top:16px">${st.pick ? `เพิ่ม ${esc(st.who ? st.who.name || st.who.phone : 'walk-in')} · ${st.pick}` : 'เพิ่มคิว'}</button>
+    <button class="btn line" data-a="block" style="margin-top:10px"><i class="ti ti-lock"></i> ปิดช่วงนี้ ไม่รับคิว</button>`;
+  const draw = () => {
+    $('.sheet', sh).innerHTML = html();
+    if (!st.find) return;
+    $('#an', sh).oninput = e => { st.nn = e.target.value; };
+    $('#ap', sh).oninput = e => { st.np = e.target.value; };
+    let tm;
+    $('#fq', sh).addEventListener('input', e => {
+      st.q = e.target.value;
+      clearTimeout(tm);
+      tm = setTimeout(async () => {
+        const q = e.target.value.trim();
+        const list = q ? await api('barberMembers', q).catch(() => []) : [];
+        st.found = list.slice(0, 6);
+        $('#fr', sh).innerHTML = foundHtml();
+      }, 300);
+    });
+  };
+  const sh = openSheet('', (a, b) => {
+    if (a === 'day') return addSheet(st.pick, b.dataset.d);
+    if (a === 'pick') { st.pick = b.dataset.t; return draw(); }
+    if (a === 'walk') { st.who = null; st.find = false; return draw(); }
+    if (a === 'find') { st.who = null; st.find = true; draw(); return $('#fq', sh).focus(); }
+    if (a === 'who') { st.who = B.recent.find(m => m.phone === b.dataset.p); st.find = false; return draw(); }
+    if (a === 'pickm') { st.who = (st.found || []).find(m => m.phone === b.dataset.p); st.find = false; return draw(); }
+    if (!st.pick) { $('#aerr', sh).textContent = 'เลือกเวลาก่อน'; return; }
+    if (a === 'walkin') {
+      let name = st.who ? st.who.name : '', phone = st.who ? st.who.phone : '';
+      if (st.find) { name = st.nn || ''; phone = st.np || ''; }
+      act({ action: 'walkin', date: day.date, time: st.pick, name, phone }, 'เพิ่มคิว ' + st.pick);
+    }
+    if (a === 'block') act({ action: 'block', date: day.date, time: st.pick }, 'ปิดช่วง ' + st.pick);
+  });
+  draw();
+}
+
+/*** ---------- ตั้งค่า ---------- ***/
+async function showSettings() {
+  B.view = 'set'; navOn('set');
+  $('#app').innerHTML = '<div class="load"><i class="ti ti-scissors"></i></div>';
+  try { B.set = await api('barberSettings'); } catch (e) { return; }
+  renderSettings();
+}
+
+function timeOpts(v) {
+  const a = [];
+  for (let m = 0; m < 24 * 60; m += 30) a.push(toHM(m));
+  if (a.indexOf(v) < 0) a.push(v);
+  return a.sort().map(t => `<option ${t === v ? 'selected' : ''}>${t}</option>`).join('');
+}
+
+// ภาพ QR พร้อมชื่อร้าน (พื้นสว่างเพื่อให้กล้องสแกนง่าย)
+let qrCache = { url: '', png: '' };
+async function drawQr(url) {
+  const img = $('#qr'), dl = $('#qrdl');
+  if (!img) return;
+  if (qrCache.url !== url) {
+    if (typeof qrcode !== 'function') { img.replaceWith(Object.assign(document.createElement('div'), { className: 'mu', textContent: 'โหลดตัวสร้าง QR ไม่ได้' })); return; }
+    try { await document.fonts.ready; } catch (e) {}
+    const qr = qrcode(0, 'M');
+    qr.addData(url); qr.make();
+    const n = qr.getModuleCount(), W = 720, H = 960, cell = Math.floor(520 / n), size = cell * n, x0 = (W - size) / 2, y0 = 210;
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const g = c.getContext('2d');
+    g.fillStyle = '#F4EFE7'; g.fillRect(0, 0, W, H);
+    g.fillStyle = '#1B1815'; g.textAlign = 'center';
+    g.font = '500 64px "Noto Serif Thai", Georgia, serif'; g.fillText('๑๐ กันยา', W / 2, 110);
+    g.fillStyle = '#FFFFFF'; g.fillRect(x0 - cell * 4, y0 - cell * 4, size + cell * 8, size + cell * 8);   // ขอบขาว 4 ช่องตามมาตรฐาน QR
+    g.fillStyle = '#141210';
+    for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (qr.isDark(r, k)) g.fillRect(x0 + k * cell, y0 + r * cell, cell, cell);
+    g.fillStyle = '#8A6A3A'; g.font = '500 40px "IBM Plex Sans Thai", sans-serif';
+    g.fillText('สแกนเพื่อจองคิว', W / 2, y0 + size + cell * 4 + 80);
+    qrCache = { url: url, png: c.toDataURL('image/png') };
+  }
+  img.src = qrCache.png; dl.href = qrCache.png;
+}
+
+function stepper(g, i, f, v) {
+  return `<span class="stp"><button data-a="step" data-g="${g}" data-i="${i}" data-f="${f}" data-d="-1">−</button><b>${v}</b><button data-a="step" data-g="${g}" data-i="${i}" data-f="${f}" data-d="1">+</button></span>`;
+}
+
+function renderSettings() {
+  const s = B.set;
+  const slots = [15, 20, 30, 40, 45, 60, 90];
+  if (slots.indexOf(s.slotMin) < 0) slots.push(s.slotMin);
+  $('#app').innerHTML = `<div class="set">
+    <div class="head"><span class="sv brand"><i class="ti ti-adjustments-horizontal au" style="font-size:20px"></i> ตั้งค่าร้าน</span></div>
+    <div class="card" style="padding:16px;text-align:center;margin-bottom:10px">
+      <div class="mu" style="margin-bottom:10px"><i class="ti ti-qrcode"></i> QR จองคิวสำหรับลูกค้า</div>
+      <img id="qr" alt="QR จองคิว" style="width:100%;max-width:260px;border-radius:10px;display:block;margin:0 auto">
+      <div class="mu" style="margin:10px 0 12px">กดค้างที่รูปเพื่อบันทึก · ปริ้นแปะหน้าร้านได้</div>
+      <div class="chips" style="grid-template-columns:1fr 1fr">
+        <a class="chip" id="qrdl" download="10kanya-qr.png"><i class="ti ti-download"></i> บันทึกรูป</a>
+        <button class="chip" data-a="qrcopy"><i class="ti ti-link"></i> คัดลอกลิงก์</button>
+      </div>
+    </div>
+    <div class="row"><i class="ti ti-sun"></i><span>เปิด</span><select id="so">${timeOpts(s.open)}</select></div>
+    <div class="row"><i class="ti ti-moon"></i><span>ปิด</span><select id="sc">${timeOpts(s.close)}</select></div>
+    <div class="row"><i class="ti ti-clock-hour-4"></i><span>คิวละ</span>
+      <select id="ss">${slots.sort((a, b) => a - b).map(n => `<option value="${n}" ${n === s.slotMin ? 'selected' : ''}>${n} นาที</option>`).join('')}</select></div>
+    <div class="row"><i class="ti ti-calendar-event"></i><span>จองล่วงหน้า</span>
+      <span class="step" style="flex:none"><button data-a="adv-">−</button><span class="sv au" style="font-size:19px;min-width:48px;text-align:center" id="sa">${s.advanceDays} วัน</span><button data-a="adv+">+</button></span></div>
+    <div class="mu" style="padding:16px 0 8px"><i class="ti ti-calendar-off"></i> วันหยุดประจำ</div>
+    <div class="chips" style="grid-template-columns:repeat(7,1fr);font-size:13px">
+      ${[1, 2, 3, 4, 5, 6, 0].map(n => `<button class="chip ${s.closedDays.indexOf(n) >= 0 ? 'on' : ''}" data-a="wd" data-n="${n}">${WD[n].replace('.', '')}</button>`).join('')}
+    </div>
+    <div class="mu" style="padding:18px 0 8px"><i class="ti ti-beach"></i> หยุดพิเศษ</div>
+    <div>${s.holidays.map(h => `<span class="hol">${dShort(h)}<button data-a="hdel" data-h="${h}" aria-label="ลบ"><i class="ti ti-x"></i></button></span>`).join('')}</div>
+    <div class="row" style="border:0;padding-top:4px"><i class="ti ti-plus mu"></i><input type="date" id="sh" min="${new Date().toISOString().slice(0, 10)}" style="flex:1;text-align:left;font-family:var(--sans);font-size:15px;color:var(--text)"></div>
+    <div class="mu" style="padding:18px 0 4px"><i class="ti ti-medal"></i> ระดับสมาชิก</div>
+    <div class="mu" style="font-size:12px;margin-bottom:8px">วัดจากแต้มสะสมรวม · แลกรางวัลแล้วระดับไม่ลด</div>
+    ${s.tiers.map((t, i) => `<div class="ed tier">
+      <span style="color:${TIER_C[i % TIER_C.length]}"><i class="ti ti-medal"></i></span>
+      <input data-f="name" value="${esc(t.name)}" maxlength="20" style="flex:1" placeholder="ชื่อระดับ">
+      <small>สะสม</small>${i ? stepper('tiers', i, 'min', t.min) : '<b class="sv au" style="min-width:56px;text-align:center">0</b>'}<input type="hidden" data-f="min" value="${i ? t.min : 0}">
+      <small>+</small>${stepper('tiers', i, 'earn', t.earn)}<input type="hidden" data-f="earn" value="${t.earn}">
+      ${s.tiers.length > 1 ? `<button class="x" data-a="tdel" data-i="${i}" aria-label="ลบ"><i class="ti ti-x"></i></button>` : ''}
+    </div>`).join('')}
+    <button class="mu" data-a="tadd" style="font-size:14px;padding:4px 0 8px"><i class="ti ti-plus"></i> เพิ่มระดับ</button>
+    <div class="mu" style="padding:14px 0 8px"><i class="ti ti-gift"></i> รางวัล</div>
+    ${s.rewards.map((r, i) => `<div class="ed reward">
+      <button data-a="icon" data-i="${i}" class="au" style="font-size:19px;padding:2px 4px" aria-label="เปลี่ยนไอคอน"><i class="ti ti-${esc(r.icon)}"></i></button><input type="hidden" data-f="icon" value="${esc(r.icon)}">
+      <input data-f="name" value="${esc(r.name)}" maxlength="30" style="flex:1" placeholder="ชื่อรางวัล">
+      ${stepper('rewards', i, 'cost', r.cost)}<input type="hidden" data-f="cost" value="${r.cost}">
+      <button class="x" data-a="rdel" data-i="${i}" aria-label="ลบ"><i class="ti ti-x"></i></button>
+    </div>`).join('')}
+    <button class="mu" data-a="radd" style="font-size:14px;padding:4px 0 8px"><i class="ti ti-plus"></i> เพิ่มรางวัล</button>
+    <div class="mu" style="padding:14px 0 0"><i class="ti ti-ticket"></i> แสดงบนตั๋วลูกค้า</div>
+    <div class="field"><i class="ti ti-phone"></i><input id="sp" placeholder="เบอร์ร้าน" inputmode="tel" value="${esc(s.phone)}"></div>
+    <div class="field"><i class="ti ti-map-pin"></i><input id="sm" placeholder="ลิงก์ Google Maps ของร้าน" value="${esc(s.mapUrl)}"></div>
+    <div class="err" id="serr" style="margin-top:12px"></div>
+    <button class="btn" data-a="save" style="margin-top:20px">บันทึก</button>
+    <div style="margin-top:28px">
+      <button class="act" data-a="pin"><i class="ti ti-key"></i>เปลี่ยน PIN</button>
+      <a class="act" href="${esc(s.sheetUrl)}" target="_blank"><i class="ti ti-table"></i>เปิดชีตข้อมูลคิว</a>
+      <button class="act" data-a="logout"><i class="ti ti-logout"></i>ออกจากระบบเครื่องนี้</button>
+    </div></div>`;
+  drawQr(s.url);
+  $('#sh').onchange = e => {
+    readSettings();
+    const v = e.target.value;
+    if (v && B.set.holidays.indexOf(v) < 0) { B.set.holidays.push(v); B.set.holidays.sort(); }
+    renderSettings();
+  };
+}
+
+function readSettings() {
+  const s = B.set;
+  s.open = $('#so').value; s.close = $('#sc').value; s.slotMin = +$('#ss').value;
+  s.phone = $('#sp').value.trim(); s.mapUrl = $('#sm').value.trim();
+  const f = (el, k) => $('input[data-f="' + k + '"]', el).value;
+  s.tiers = [...document.querySelectorAll('.ed.tier')].map(el => ({ name: f(el, 'name'), min: +f(el, 'min') || 0, earn: +f(el, 'earn') || 0 }));
+  s.rewards = [...document.querySelectorAll('.ed.reward')].map(el => ({ icon: f(el, 'icon'), name: f(el, 'name'), cost: +f(el, 'cost') || 0 }));
+}
+
+$('#app').addEventListener('click', async e => {
+  if (B.view !== 'set') return;
+  const b = e.target.closest('[data-a]'); if (!b) return;
+  const a = b.dataset.a, s = B.set;
+  readSettings();
+  if (a === 'adv-' || a === 'adv+') { s.advanceDays = Math.max(0, Math.min(30, s.advanceDays + (a === 'adv+' ? 1 : -1))); return renderSettings(); }
+  if (a === 'wd') { const n = +b.dataset.n, i = s.closedDays.indexOf(n); i >= 0 ? s.closedDays.splice(i, 1) : s.closedDays.push(n); return renderSettings(); }
+  if (a === 'tadd') { const last = s.tiers[s.tiers.length - 1]; s.tiers.push({ name: '', min: last.min + 20, earn: last.earn + 1 }); return renderSettings(); }
+  if (a === 'tdel') { s.tiers.splice(+b.dataset.i, 1); return renderSettings(); }
+  if (a === 'radd') { s.rewards.push({ icon: 'gift', name: '', cost: 10 }); return renderSettings(); }
+  if (a === 'icon') { const r = s.rewards[+b.dataset.i]; r.icon = ICONS[(ICONS.indexOf(r.icon) + 1) % ICONS.length]; return renderSettings(); }
+  if (a === 'rdel') { s.rewards.splice(+b.dataset.i, 1); return renderSettings(); }
+  if (a === 'hdel') { s.holidays = s.holidays.filter(h => h !== b.dataset.h); return renderSettings(); }
+  if (a === 'qrcopy') return copyText(s.url);
+  if (a === 'step') {
+    const o = s[b.dataset.g][+b.dataset.i], f = b.dataset.f, step = f === 'min' ? 5 : 1;
+    o[f] = Math.max(f === 'min' ? step : 1, o[f] + step * (+b.dataset.d));
+    return renderSettings();
+  }
+  if (a === 'save') {
+    b.classList.add('busy');
+    let r;
+    try { r = await api('saveSettings', s); } catch (err) { b.classList.remove('busy'); return; }
+    b.classList.remove('busy');
+    if (!r.ok) { $('#serr').textContent = r.msg; return; }
+    B.set = r.settings; renderSettings();
+    toast(r.orphans ? `บันทึกแล้ว · มีคิวตรงวันหยุด ${r.orphans} คิว` : 'บันทึกแล้ว');
+    loadDay(B.date).catch(() => {});
+  }
+  if (a === 'pin') return pinSheet();
+  if (a === 'logout') return askConfirm('ออกจากระบบเครื่องนี้?', 'ออกจากระบบ', async () => {
+    await call('barberLogout', B.sess).catch(() => {});
+    store.del('k10_sess'); B.sess = ''; showLogin();
+  });
+});
+
+function pinSheet() {
+  const sh = openSheet(`<div id="pr2" style="text-align:center"><h3>เปลี่ยน PIN</h3>${padHtml('PIN เดิม')}</div>`);
+  let oldPin = '', newPin = '';
+  bindPad($('#pr2', sh), async (v, pad) => {
+    if (!oldPin) { oldPin = v; return pad.reset('PIN ใหม่ (4–8 หลัก)'); }
+    if (!newPin) { newPin = v; return pad.reset('ใส่ PIN ใหม่อีกครั้ง'); }
+    if (v !== newPin) { newPin = ''; return pad.reset('PIN ใหม่ (4–8 หลัก)', 'PIN ใหม่สองครั้งไม่ตรงกัน'); }
+    pad.wait('กำลังบันทึก…');
+    const r = await api('changePin', oldPin, newPin).catch(() => null);
+    if (!r || !r.ok) { oldPin = newPin = ''; return pad.reset('PIN เดิม', r ? r.msg : 'เชื่อมต่อไม่สำเร็จ'); }
+    closeSheet(); toast('เปลี่ยน PIN แล้ว');
+  });
+}
+
+/*** ---------- สมาชิก ---------- ***/
+const ICONS = ['scissors', 'droplet', 'razor', 'gift', 'coffee', 'discount'];   // แตะไอคอนรางวัลเพื่อวนเปลี่ยน
+
+async function showMembers(q) {
+  B.view = 'mem'; navOn('mem');
+  $('#app').innerHTML = `
+    <div class="head"><span class="sv brand">สมาชิก</span>
+      <button class="mu" data-m="add" style="font-size:14px"><i class="ti ti-plus"></i> ลงแต้มลูกค้าเก่า</button></div>
+    <div class="field"><i class="ti ti-search"></i><input id="mq" placeholder="เบอร์ (4 ตัวท้ายก็ได้) หรือชื่อ" value="${esc(q || '')}" autocomplete="off"></div>
+    <div id="ml" style="margin-top:6px"><div class="load" style="padding:40px 0"><i class="ti ti-scissors"></i></div></div>`;
+  let timer;
+  const load = async () => {
+    const qq = $('#mq') ? $('#mq').value : '';
+    let list;
+    try { list = await api('barberMembers', qq); } catch (e) { return; }
+    if (B.view !== 'mem' || ($('#mq') && $('#mq').value !== qq)) return;
+    $('#ml').innerHTML = list.length ? list.map(m => `
+      <div class="row" data-m="open" data-p="${esc(m.phone)}" style="cursor:pointer">
+        <span style="flex:1;min-width:0"><span style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.name || '—')}</span>
+          <span class="mu">${esc(m.phone)} · มา ${m.visits} ครั้ง</span></span>
+        ${tierBadge(m.tier)}<span class="sv au" style="font-size:21px;min-width:34px;text-align:right">${m.points}</span>
+      </div>`).join('') : '<div class="mu" style="text-align:center;padding:40px 0">ไม่พบสมาชิก</div>';
+  };
+  $('#mq').addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(load, 300); });
+  load();
+}
+
+$('#app').addEventListener('click', e => {
+  if (B.view !== 'mem') return;
+  const b = e.target.closest('[data-m]'); if (!b) return;
+  if (b.dataset.m === 'open') return memberSheet(b.dataset.p);
+  if (b.dataset.m === 'add') return adjustSheet();
+});
+
+async function memberSheet(phone) {
+  const r = await api('barberMember', phone).catch(() => null);
+  if (!r) return;
+  if (!r.ok) return toast(r.msg);
+  const m = r.member, kind = { visit: 'มาตัด', undo: 'ย้อนคิว', redeem: 'แลก', adjust: 'ปรับแต้ม' };
+  const sh = openSheet(`${memberCard(m)}
+    ${r.rewards.length ? `<div class="mu" style="margin:16px 0 8px"><i class="ti ti-gift"></i> แลกรางวัล</div>${rewardList(r.rewards, m.points, true)}` : ''}
+    <button class="act" data-a="adj" style="margin-top:6px"><i class="ti ti-plus-minus"></i>ปรับแต้ม</button>
+    ${m.phone ? `<a class="act" href="tel:${esc(m.phone)}"><i class="ti ti-phone"></i>${esc(m.phone)}</a>` : ''}
+    <div class="mu" style="margin:14px 0 4px"><i class="ti ti-history"></i> ประวัติล่าสุด</div>
+    ${r.history.map(h => `<div class="row" style="padding:8px 0;font-size:13px">
+      <span class="mu" style="width:84px">${dShort(h.at.slice(0, 10))}</span>
+      <span style="flex:1">${kind[h.kind] || h.kind}${h.note ? ' · ' + esc(h.note) : ''}</span>
+      <span class="sv ${h.delta > 0 ? 'au' : ''}" style="font-size:16px">${h.delta > 0 ? '+' : ''}${h.delta}</span></div>`).join('')}`,
+    (a, b) => {
+      if (a === 'adj') return adjustSheet(m);
+      if (a === 'redeem') {
+        const rw = r.rewards[+b.dataset.i];
+        askConfirm(`แลก ${rw.name} ใช้ ${rw.cost} แต้ม?`, 'แลกรางวัล', async () => {
+          const x = await api('barberRedeem', m.phone, +b.dataset.i).catch(() => null);
+          if (!x) return;
+          if (!x.ok) return toast(x.msg);
+          toast(`แลก${rw.name}แล้ว · เหลือ ${x.member.points} แต้ม`);
+          memberSheet(m.phone);
+          if (B.view === 'mem') showMembers($('#mq') ? $('#mq').value : '');
+        });
+      }
+    });
+  return sh;
+}
+
+function adjustSheet(m) {
+  const sh = openSheet(`<h3>${m ? 'ปรับแต้ม · ' + esc(m.name || m.phone) : 'ลงแต้มลูกค้าเก่า'}</h3>
+    ${m ? '' : `<div class="field"><i class="ti ti-phone"></i><input id="jp" placeholder="เบอร์โทร" inputmode="tel" maxlength="12"></div>
+    <div class="field"><i class="ti ti-user"></i><input id="jn" placeholder="ชื่อ" maxlength="40"></div>`}
+    <div class="row" style="justify-content:center;gap:22px;border:0;padding:18px 0 8px">
+      <button data-a="m" class="ring" style="border-color:var(--line2);color:var(--mute)" aria-label="ลด"><i class="ti ti-minus"></i></button>
+      <span class="sv au" id="jv" style="font-size:40px;min-width:70px;text-align:center">+1</span>
+      <button data-a="p" class="ring" aria-label="เพิ่ม"><i class="ti ti-plus"></i></button>
+    </div>
+    <div class="chips" id="jt" style="grid-template-columns:repeat(3,1fr);margin-top:6px">
+      ${['บัตรกระดาษ', 'แก้ไขผิด', 'โบนัส'].map((n, i) => `<button class="chip ${i === (m ? 1 : 0) ? 'on' : ''}" data-a="note" data-n="${n}">${n}</button>`).join('')}</div>
+    <div class="mu" style="margin-top:6px">แต้มที่เพิ่มนับเข้าแต้มสะสมรวมด้วย</div>
+    <div class="err" id="je"></div>
+    <button class="btn" data-a="ok" style="margin-top:16px">บันทึก</button>`, async (a, b) => {
+      const v = $('#jv', sh);
+      let n = +v.textContent;
+      if (a === 'note') { $('#jt', sh).querySelectorAll('.chip').forEach(c => c.classList.toggle('on', c === b)); return; }
+      if (a === 'm' || a === 'p') { n += a === 'p' ? 1 : -1; if (!n) n += a === 'p' ? 1 : -1; v.textContent = (n > 0 ? '+' : '') + n; return; }
+      if (a !== 'ok') return;
+      const phone = m ? m.phone : $('#jp', sh).value, name = m ? '' : $('#jn', sh).value;
+      const r = await api('barberAdjust', phone, n, name, $('#jt .on', sh).dataset.n).catch(() => null);
+      if (!r) return;
+      if (!r.ok) { $('#je', sh).textContent = r.msg; return; }
+      toast('บันทึกแล้ว · มี ' + r.member.points + ' แต้ม');
+      memberSheet(r.member.phone);
+      if (B.view === 'mem') showMembers($('#mq') ? $('#mq').value : '');
+    });
+}
+
+/*** ---------- แถบล่าง ---------- ***/
+function navOn(v) { document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.v === v)); }
+$('#nav').addEventListener('click', async e => {
+  const b = e.target.closest('[data-v]'); if (!b) return;
+  const v = b.dataset.v;
+  if (v === 'list') { B.view = 'list'; navOn('list'); return B.d ? (renderList(), loadDay(B.date).catch(() => {})) : boot(); }
+  if (v === 'set') return showSettings();
+  if (v === 'mem') return showMembers();
+  if (v === 'add') { if (B.view !== 'list') { B.view = 'list'; renderList(); } return addSheet(''); }
+  if (v === 'share') {
+    const s = B.set || await api('barberSettings').catch(() => null);
+    if (s) { B.set = s; copyText(s.url); }
+  }
+});
+
+boot();
+</script>
+</body>
+</html>
