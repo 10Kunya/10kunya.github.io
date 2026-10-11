@@ -102,6 +102,8 @@ a{color:inherit;text-decoration:none}
 .row.r-free .ic,.row.r-block .ic{color:var(--dim)}
 .dnav{display:flex;align-items:center;gap:4px}
 .dnav button{color:var(--mute);font-size:20px;padding:4px 6px}
+#links summary::-webkit-details-marker{display:none}
+#links[open] summary .ti-chevron-down{transform:rotate(180deg)}
 .dots{display:flex;justify-content:center;gap:14px;min-height:14px}
 .dots span{width:12px;height:12px;border-radius:50%;border:1px solid var(--gold-line)}
 .dots span.on{background:var(--gold);border-color:var(--gold)}
@@ -616,6 +618,17 @@ function renderSettings() {
         <button class="chip" data-a="qrcopy"><i class="ti ti-link"></i> คัดลอกลิงก์</button>
       </div>
     </div>
+    <details id="links" class="card" style="padding:4px 16px;margin-bottom:10px" ${B.linksOpen ? 'open' : ''}>
+      <summary class="mu" style="padding:12px 0;cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px">
+        <i class="ti ti-link"></i><span style="flex:1">ลิงก์ร้าน</span><i class="ti ti-chevron-down"></i></summary>
+      ${(s.links || []).map(l => `<div class="row" style="align-items:flex-start">
+        <i class="ti ti-${esc(l.icon)} au" style="font-size:19px;margin-top:2px"></i>
+        <span style="flex:1;min-width:0">${esc(l.label)}
+          <span class="mu" style="display:block;word-break:break-all">${esc(l.short)}</span>
+          <span class="mu" style="display:block;word-break:break-all;font-size:11px;color:var(--dim)">${esc(l.full)}</span></span>
+        <button class="au" data-a="copy" data-u="${esc(l.short)}" aria-label="คัดลอก" style="font-size:20px;padding:4px"><i class="ti ti-copy"></i></button>
+      </div>`).join('')}
+    </details>
     <div class="row"><i class="ti ti-sun"></i><span>เปิด</span><select id="so">${timeOpts(s.open)}</select></div>
     <div class="row"><i class="ti ti-moon"></i><span>ปิด</span><select id="sc">${timeOpts(s.close)}</select></div>
     <div class="row"><i class="ti ti-clock-hour-4"></i><span>คิวละ</span>
@@ -658,6 +671,7 @@ function renderSettings() {
       <button class="act" data-a="logout"><i class="ti ti-logout"></i>ออกจากระบบเครื่องนี้</button>
     </div></div>`;
   drawQr(s.url);
+  $('#links').ontoggle = e => { B.linksOpen = e.target.open; };
   $('#sh').onchange = e => {
     readSettings();
     const v = e.target.value;
@@ -689,6 +703,7 @@ $('#app').addEventListener('click', async e => {
   if (a === 'rdel') { s.rewards.splice(+b.dataset.i, 1); return renderSettings(); }
   if (a === 'hdel') { s.holidays = s.holidays.filter(h => h !== b.dataset.h); return renderSettings(); }
   if (a === 'qrcopy') return copyText(s.url);
+  if (a === 'copy') return copyText(b.dataset.u);
   if (a === 'step') {
     const o = s[b.dataset.g][+b.dataset.i], f = b.dataset.f, step = f === 'min' ? 5 : 1;
     o[f] = Math.max(f === 'min' ? step : 1, o[f] + step * (+b.dataset.d));
