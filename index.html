@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>๑๐ กันยา · ช่าง</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#141210">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="๑๐ กันยา">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=IBM+Plex+Sans+Thai:wght@400;500&family=Noto+Serif+Thai:wght@400;500&display=swap" rel="stylesheet">
@@ -117,8 +124,9 @@ a{color:inherit;text-decoration:none}
 .newbk > .ti:first-child{font-size:26px}
 .dnav{display:flex;align-items:center;gap:4px}
 .dnav button{color:var(--mute);font-size:20px;padding:4px 6px}
-#links summary::-webkit-details-marker,#manual summary::-webkit-details-marker{display:none}
-#links[open] summary .ti-chevron-down,#manual[open] > summary .ti-chevron-down{transform:rotate(180deg)}
+details.fold > summary{padding:12px 0;cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px}
+details.fold > summary::-webkit-details-marker{display:none}
+details.fold[open] > summary .ti-chevron-down{transform:rotate(180deg)}
 .man h4{margin:14px 0 6px;font-size:15px;font-weight:500;color:var(--gold)}
 .man ul{margin:0;padding-left:18px;color:var(--text);font-size:14px;line-height:1.7}
 .man li{margin-bottom:2px}
@@ -281,7 +289,7 @@ async function copyText(text) {
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script>
-const B = { sess: store.get('k10_sess', ''), date: '', d: null, set: null, view: 'list', timer: null };
+const B = { open: {}, sess: store.get('k10_sess', ''), date: '', d: null, set: null, view: 'list', timer: null };
 
 async function api(fn, ...args) {
   try { return await call(fn, B.sess, ...args); }
@@ -353,6 +361,7 @@ async function showLogin() {
 async function boot() {
   if (!B.sess) return showLogin();
   $('#nav').style.display = '';
+  saveSessForSw(B.sess);
   try { await loadDay(B.date); } catch (e) { return; }
   keepAwake();
   clearInterval(B.timer);
@@ -728,6 +737,12 @@ async function drawQr(url) {
   img.src = qrCache.png; dl.href = qrCache.png;
 }
 
+// กล่องพับได้ในหน้าตั้งค่า (จำว่าเปิดค้างไว้กล่องไหน)
+function fold(id, icon, title, body) {
+  return `<details id="${id}" class="card fold" style="padding:0 16px;margin-bottom:10px" ${B.open[id] ? 'open' : ''}>
+    <summary class="mu"><i class="ti ${icon}"></i><span style="flex:1">${title}</span><i class="ti ti-chevron-down"></i></summary>${body}</details>`;
+}
+
 function stepper(g, i, f, v) {
   return `<span class="stp"><button data-a="step" data-g="${g}" data-i="${i}" data-f="${f}" data-d="-1">−</button><b>${v}</b><button data-a="step" data-g="${g}" data-i="${i}" data-f="${f}" data-d="1">+</button></span>`;
 }
@@ -738,31 +753,22 @@ function renderSettings() {
   if (slots.indexOf(s.slotMin) < 0) slots.push(s.slotMin);
   $('#app').innerHTML = `<div class="set">
     <div class="head"><span class="sv brand"><i class="ti ti-adjustments-horizontal au" style="font-size:20px"></i> ตั้งค่าร้าน</span></div>
-    <div class="card" style="padding:16px;text-align:center;margin-bottom:10px">
-      <div class="mu" style="margin-bottom:10px"><i class="ti ti-qrcode"></i> QR จองคิวสำหรับลูกค้า</div>
+    ${fold('qrbox', 'ti-qrcode', 'QR จองคิวสำหรับลูกค้า', `<div style="text-align:center;padding-bottom:14px">
       <img id="qr" alt="QR จองคิว" style="width:100%;max-width:260px;border-radius:10px;display:block;margin:0 auto">
       <div class="mu" style="margin:10px 0 12px">กดค้างที่รูปเพื่อบันทึก · ปริ้นแปะหน้าร้านได้</div>
       <div class="chips" style="grid-template-columns:1fr 1fr">
         <a class="chip" id="qrdl" download="10kanya-qr.png"><i class="ti ti-download"></i> บันทึกรูป</a>
         <button class="chip" data-a="qrcopy"><i class="ti ti-link"></i> คัดลอกลิงก์</button>
-      </div>
-    </div>
-    <details id="links" class="card" style="padding:4px 16px;margin-bottom:10px" ${B.linksOpen ? 'open' : ''}>
-      <summary class="mu" style="padding:12px 0;cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px">
-        <i class="ti ti-link"></i><span style="flex:1">ลิงก์ร้าน</span><i class="ti ti-chevron-down"></i></summary>
-      ${(s.links || []).map(l => `<div class="row" style="align-items:flex-start">
+      </div></div>`)}
+    ${fold('links', 'ti-link', 'ลิงก์ร้าน', (s.links || []).map(l => `<div class="row" style="align-items:flex-start">
         <i class="ti ti-${esc(l.icon)} au" style="font-size:19px;margin-top:2px"></i>
         <span style="flex:1;min-width:0">${esc(l.label)}
           <span class="mu" style="display:block;word-break:break-all">${esc(l.short)}</span>
           <span class="mu" style="display:block;word-break:break-all;font-size:11px;color:var(--dim)">${esc(l.full)}</span></span>
         <button class="au" data-a="copy" data-u="${esc(l.short)}" aria-label="คัดลอก" style="font-size:20px;padding:4px"><i class="ti ti-copy"></i></button>
-      </div>`).join('')}
-    </details>
-    <details id="manual" class="card" style="padding:4px 16px;margin-bottom:10px" ${B.manualOpen ? 'open' : ''}>
-      <summary class="mu" style="padding:12px 0;cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px">
-        <i class="ti ti-book"></i><span style="flex:1">คู่มือการใช้งาน</span><i class="ti ti-chevron-down"></i></summary>
-      <div class="man" style="padding-bottom:12px">${MANUAL}</div>
-    </details>
+      </div>`).join(''))}
+    ${fold('push', 'ti-bell-ringing', 'แจ้งเตือนบนมือถือ', '<div id="pushbox" style="padding-bottom:14px"><div class="mu">กำลังตรวจ…</div></div>')}
+    ${fold('manual', 'ti-book', 'คู่มือการใช้งาน', `<div class="man" style="padding-bottom:12px">${MANUAL}</div>`)}
     <div class="row"><i class="ti ti-sun"></i><span>เปิด</span><select id="so">${timeOpts(s.open)}</select></div>
     <div class="row"><i class="ti ti-moon"></i><span>ปิด</span><select id="sc">${timeOpts(s.close)}</select></div>
     <div class="row"><i class="ti ti-clock-hour-4"></i><span>คิวละ</span>
@@ -805,8 +811,8 @@ function renderSettings() {
       <button class="act" data-a="logout"><i class="ti ti-logout"></i>ออกจากระบบเครื่องนี้</button>
     </div></div>`;
   drawQr(s.url);
-  $('#links').ontoggle = e => { B.linksOpen = e.target.open; };
-  $('#manual').ontoggle = e => { B.manualOpen = e.target.open; };
+  document.querySelectorAll('details.fold').forEach(d => { d.ontoggle = () => { B.open[d.id] = d.open; }; });
+  renderPush();
   $('#sh').onchange = e => {
     readSettings();
     const v = e.target.value;
@@ -838,6 +844,7 @@ $('#app').addEventListener('click', async e => {
   if (a === 'rdel') { s.rewards.splice(+b.dataset.i, 1); return renderSettings(); }
   if (a === 'hdel') { s.holidays = s.holidays.filter(h => h !== b.dataset.h); return renderSettings(); }
   if (a === 'qrcopy') return copyText(s.url);
+  if (a === 'pushOn' || a === 'pushOff' || a === 'pushTest') return pushAction(a, b);
   if (a === 'copy') return copyText(b.dataset.u);
   if (a === 'step') {
     const o = s[b.dataset.g][+b.dataset.i], f = b.dataset.f, step = f === 'min' ? 5 : 1;
@@ -857,7 +864,7 @@ $('#app').addEventListener('click', async e => {
   if (a === 'pin') return pinSheet();
   if (a === 'logout') return askConfirm('ออกจากระบบเครื่องนี้?', 'ออกจากระบบ', async () => {
     await call('barberLogout', B.sess).catch(() => {});
-    store.del('k10_sess'); B.sess = ''; showLogin();
+    store.del('k10_sess'); B.sess = ''; saveSessForSw(''); showLogin();
   });
 });
 
@@ -970,6 +977,70 @@ function adjustSheet(m) {
     });
 }
 
+/*** ---------- แจ้งเตือนบนมือถือ (Web Push) ---------- ***/
+const VAPID_PUBLIC = 'BARQkIM158NIAXl8VwaR0ialbhEzcxmOn_9QIw-9pV-hvaLzXY8i59r-gWXWkEDVzjsWPyox7XVSdrnIjGDobnw';
+const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+function saveSessForSw(sess) {
+  try { caches.open('k10').then(c => sess ? c.put('sess', new Response(sess)) : c.delete('sess')); } catch (e) {}
+}
+async function pushSub() {
+  const reg = await navigator.serviceWorker.getRegistration();
+  return reg ? reg.pushManager.getSubscription() : null;
+}
+async function pushState() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window))
+    return isIOS() && !isStandalone() ? 'ios-home' : 'unsupported';
+  if (Notification.permission === 'denied') return 'denied';
+  return (await pushSub()) ? 'on' : 'off';
+}
+async function renderPush() {
+  const box = $('#pushbox'); if (!box) return;
+  let st = 'unsupported';
+  try { st = await pushState(); } catch (e) {}
+  const html = {
+    on: `<div style="color:var(--ok);margin-bottom:10px"><i class="ti ti-circle-check"></i> เปิดอยู่บนเครื่องนี้</div>
+      <div class="mu" style="margin-bottom:12px">มีลูกค้าจองใหม่ มือถือจะเด้งแจ้งเตือน แม้ปิดหน้านี้อยู่</div>
+      <div class="chips" style="grid-template-columns:1fr 1fr"><button class="chip" data-a="pushTest"><i class="ti ti-send"></i> ทดสอบ</button>
+      <button class="chip" data-a="pushOff"><i class="ti ti-bell-off"></i> ปิด</button></div>`,
+    off: `<div class="mu" style="margin-bottom:12px">ให้มือถือเด้งแจ้งเตือนเมื่อมีลูกค้าจองใหม่ แม้ปิดหน้านี้อยู่${isIOS() ? '' : ' · ระบบจะถามขออนุญาต ให้กด "อนุญาต"'}</div>
+      <button class="btn" data-a="pushOn"><i class="ti ti-bell-ringing"></i> เปิดการแจ้งเตือน</button>`,
+    denied: `<div class="mu">เครื่องนี้บล็อกการแจ้งเตือนของเว็บนี้ไว้ เปิดได้ที่ ⋮ → การตั้งค่า → การตั้งค่าเว็บไซต์ → การแจ้งเตือน แล้วกลับมาหน้านี้</div>`,
+    'ios-home': `<div class="mu" style="line-height:1.7">iPhone ต้องติดตั้งเป็นแอปก่อน:<br>1. เปิดหน้านี้ใน Safari<br>2. กดปุ่มแชร์ <i class="ti ti-share-2"></i> → "เพิ่มไปยังหน้าจอโฮม"<br>3. เปิดแอป ๑๐ กันยา จากไอคอน แล้วกลับมาหน้านี้เพื่อกดเปิด<br>(ต้องเป็น iOS 16.4 ขึ้นไป)</div>`,
+    unsupported: `<div class="mu">เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน ลองเปิดด้วย Chrome</div>`
+  }[st];
+  box.innerHTML = html;
+}
+async function pushAction(a, b) {
+  b.classList.add('busy');
+  try {
+    if (a === 'pushOn') {
+      const reg = await navigator.serviceWorker.register('sw.js');
+      await navigator.serviceWorker.ready;
+      if (await Notification.requestPermission() !== 'granted') { toast('ไม่ได้รับอนุญาต'); return renderPush(); }
+      const key = Uint8Array.from(atob(VAPID_PUBLIC.replace(/-/g, '+').replace(/_/g, '/')), ch => ch.charCodeAt(0));
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+      saveSessForSw(B.sess);
+      const r = await api('barberPushSub', sub.endpoint, (isIOS() ? 'iPhone' : 'มือถือ') + ' ' + new Date().toLocaleDateString('th-TH'));
+      if (!r.ok) { await sub.unsubscribe(); toast(r.msg); } else toast('เปิดการแจ้งเตือนแล้ว');
+    }
+    if (a === 'pushOff') {
+      const sub = await pushSub();
+      if (sub) { await api('barberPushUnsub', sub.endpoint).catch(() => {}); await sub.unsubscribe(); }
+      toast('ปิดการแจ้งเตือนแล้ว');
+    }
+    if (a === 'pushTest') {
+      const r = await api('barberPushTest');
+      toast(r.total ? `ส่งแล้ว ${r.sent}/${r.total} เครื่อง · รอสักครู่` : 'ยังไม่มีเครื่องที่เปิดการแจ้งเตือน');
+    }
+  } catch (e) {
+    toast('ทำไม่สำเร็จ · ' + (e && e.message || e));
+  } finally {
+    b.classList.remove('busy');
+    renderPush();
+  }
+}
+
 /*** ---------- คู่มือ ---------- ***/
 const MANUAL = `
   <h4><i class="ti ti-list"></i> หน้าคิว</h4>
@@ -986,6 +1057,7 @@ const MANUAL = `
   <ul>
     <li>เปิดหน้านี้ค้างไว้ มีลูกค้าจองใหม่จะมีเสียง + สั่น + แถบทองด้านบน แตะแถบเพื่อดูวันนั้น</li>
     <li>หลังเปิดหน้า ให้แตะจอ 1 ครั้งก่อน เสียงถึงจะดังได้</li>
+    <li>อยากให้เด้งแม้ปิดหน้านี้: ตั้งค่า → "แจ้งเตือนบนมือถือ" → เปิดการแจ้งเตือน (iPhone ต้องเพิ่มลงหน้าจอโฮมก่อน)</li>
   </ul>
   <h4><i class="ti ti-plus"></i> เพิ่มคิว</h4>
   <ul>
