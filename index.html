@@ -117,8 +117,16 @@ a{color:inherit;text-decoration:none}
 .newbk > .ti:first-child{font-size:26px}
 .dnav{display:flex;align-items:center;gap:4px}
 .dnav button{color:var(--mute);font-size:20px;padding:4px 6px}
-#links summary::-webkit-details-marker{display:none}
-#links[open] summary .ti-chevron-down{transform:rotate(180deg)}
+#links summary::-webkit-details-marker,#manual summary::-webkit-details-marker{display:none}
+#links[open] summary .ti-chevron-down,#manual[open] > summary .ti-chevron-down{transform:rotate(180deg)}
+.man h4{margin:14px 0 6px;font-size:15px;font-weight:500;color:var(--gold)}
+.man ul{margin:0;padding-left:18px;color:var(--text);font-size:14px;line-height:1.7}
+.man li{margin-bottom:2px}
+.man .ti{color:var(--gold)}
+.tipbox{position:fixed;z-index:45;bottom:calc(74px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--text);color:var(--bg);
+  border-radius:12px;padding:10px 14px;font-size:14px;line-height:1.45;max-width:230px;text-align:center;pointer-events:none;animation:fade .12s}
+.tipbox b{display:block;font-size:15px}
+.nav button{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
 .dots{display:flex;justify-content:center;gap:14px;min-height:14px}
 .dots span{width:12px;height:12px;border-radius:50%;border:1px solid var(--gold-line)}
 .dots span.on{background:var(--gold);border-color:var(--gold)}
@@ -750,6 +758,11 @@ function renderSettings() {
         <button class="au" data-a="copy" data-u="${esc(l.short)}" aria-label="คัดลอก" style="font-size:20px;padding:4px"><i class="ti ti-copy"></i></button>
       </div>`).join('')}
     </details>
+    <details id="manual" class="card" style="padding:4px 16px;margin-bottom:10px" ${B.manualOpen ? 'open' : ''}>
+      <summary class="mu" style="padding:12px 0;cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px">
+        <i class="ti ti-book"></i><span style="flex:1">คู่มือการใช้งาน</span><i class="ti ti-chevron-down"></i></summary>
+      <div class="man" style="padding-bottom:12px">${MANUAL}</div>
+    </details>
     <div class="row"><i class="ti ti-sun"></i><span>เปิด</span><select id="so">${timeOpts(s.open)}</select></div>
     <div class="row"><i class="ti ti-moon"></i><span>ปิด</span><select id="sc">${timeOpts(s.close)}</select></div>
     <div class="row"><i class="ti ti-clock-hour-4"></i><span>คิวละ</span>
@@ -793,6 +806,7 @@ function renderSettings() {
     </div></div>`;
   drawQr(s.url);
   $('#links').ontoggle = e => { B.linksOpen = e.target.open; };
+  $('#manual').ontoggle = e => { B.manualOpen = e.target.open; };
   $('#sh').onchange = e => {
     readSettings();
     const v = e.target.value;
@@ -955,6 +969,87 @@ function adjustSheet(m) {
       if (B.view === 'mem') showMembers($('#mq') ? $('#mq').value : '');
     });
 }
+
+/*** ---------- คู่มือ ---------- ***/
+const MANUAL = `
+  <h4><i class="ti ti-list"></i> หน้าคิว</h4>
+  <ul>
+    <li>การ์ดบนสุด = คิวตอนนี้ (หรือคิวถัดไป) กด <i class="ti ti-check"></i> เมื่อตัดเสร็จ ลูกค้าได้แต้มอัตโนมัติ</li>
+    <li>ด้านขวาของการ์ด: <i class="ti ti-users"></i> ทั้งหมด · <i class="ti ti-check"></i> เสร็จ · <i class="ti ti-hourglass"></i> รอ</li>
+    <li>แตะ <i class="ti ti-chevron-left"></i> <i class="ti ti-chevron-right"></i> เพื่อดูวันอื่น แตะชื่อวันเพื่อกลับวันนี้</li>
+    <li>แตะช่องที่มีคิว = เมนู (เสร็จ / ไม่มา / เลื่อนวัน / ยกเลิก / โทร)</li>
+    <li>แตะช่องว่าง = เพิ่มคิวเวลานั้น หรือปิดช่วงไม่รับคิว</li>
+    <li><b>กดค้างที่คิว</b> แล้วลากไปช่องว่าง = ย้ายเวลา (มีถามยืนยันก่อน)</li>
+    <li>ช่องกรอบทอง = คิวตอนนี้ · เส้นประ = ว่าง · ขีดฆ่า = เสร็จแล้ว · <i class="ti ti-lock"></i> = ปิด · เวลาสีอิฐ = เลยเวลาแล้วยังไม่ปิดคิว</li>
+  </ul>
+  <h4><i class="ti ti-bell-ringing"></i> แจ้งเตือนจองใหม่</h4>
+  <ul>
+    <li>เปิดหน้านี้ค้างไว้ มีลูกค้าจองใหม่จะมีเสียง + สั่น + แถบทองด้านบน แตะแถบเพื่อดูวันนั้น</li>
+    <li>หลังเปิดหน้า ให้แตะจอ 1 ครั้งก่อน เสียงถึงจะดังได้</li>
+  </ul>
+  <h4><i class="ti ti-plus"></i> เพิ่มคิว</h4>
+  <ul>
+    <li>เลือกวัน → เวลา → ลูกค้า (ลูกค้าประจำ / ไม่ระบุ / ค้นหา·ใหม่)</li>
+    <li>ใส่เบอร์ลูกค้า = ได้แต้มเมื่อกดเสร็จ · ไม่ระบุ = ไม่มีแต้ม</li>
+  </ul>
+  <h4><i class="ti ti-users"></i> สมาชิกและแต้ม</h4>
+  <ul>
+    <li>ลูกค้าเป็นสมาชิกอัตโนมัติด้วยเบอร์โทร แต้มไม่มีหมดอายุ</li>
+    <li>ระดับวัดจากแต้มสะสมรวม แลกรางวัลแล้วระดับไม่ลด ระดับสูงได้แต้มต่อครั้งมากขึ้น</li>
+    <li>แตะชื่อสมาชิก → แลกรางวัล (ลูกค้าแลกเองไม่ได้) / ปรับแต้ม / ดูประวัติ</li>
+    <li>"ลงแต้มลูกค้าเก่า" ใช้กับลูกค้าที่มีบัตรสะสมกระดาษ</li>
+  </ul>
+  <h4><i class="ti ti-share"></i> แชร์ให้ลูกค้า</h4>
+  <ul>
+    <li>ปุ่มแชร์ = คัดลอกลิงก์จองคิว · QR อยู่บนสุดของหน้านี้ กดค้างที่รูปเพื่อบันทึก</li>
+  </ul>
+  <h4><i class="ti ti-adjustments-horizontal"></i> ตั้งค่า</h4>
+  <ul>
+    <li>เวลาเปิด–ปิด · คิวละกี่นาที · จองล่วงหน้ากี่วัน · วันหยุดประจำ · วันหยุดพิเศษ</li>
+    <li>ตั้งวันหยุดทับวันที่มีคิว ระบบจะบอกจำนวนคิวที่ต้องโทรแจ้งลูกค้า</li>
+    <li>ระดับสมาชิก / รางวัล ใช้ปุ่ม − + · แตะไอคอนรางวัลเพื่อเปลี่ยนรูป · อย่าลืมกด "บันทึก"</li>
+    <li>เปลี่ยน PIN · เปิดชีตข้อมูล · ออกจากระบบเครื่องนี้ อยู่ท้ายหน้า</li>
+  </ul>
+  <h4><i class="ti ti-hand-finger"></i> เคล็ดลับ</h4>
+  <ul>
+    <li>กดค้างที่ปุ่มแถบล่าง = ดูว่าปุ่มนั้นทำอะไร</li>
+    <li>ใน Chrome กด ⋮ → "เพิ่มไปยังหน้าจอหลัก" จะได้ไอคอนเปิดแอปได้ทันที</li>
+  </ul>`;
+
+const NAV_TIPS = {
+  list: ['คิว', 'ดูตารางคิวทั้งวัน กดค้างที่คิวเพื่อลากย้าย'],
+  add: ['เพิ่มคิว', 'ลงคิว walk-in / ลูกค้าประจำ หรือปิดช่วงไม่รับคิว'],
+  mem: ['สมาชิก', 'ดูแต้ม แลกรางวัล ปรับแต้ม'],
+  share: ['ลิงก์ลูกค้า', 'คัดลอกลิงก์จองคิวไปส่งให้ลูกค้า'],
+  set: ['ตั้งค่า', 'เวลาเปิดปิด วันหยุด แต้ม รางวัล QR และคู่มือ']
+};
+(function bindNavTips() {
+  let timer = null, shown = false;
+  const nav = $('#nav');
+  const hide = () => { const t = $('.tipbox'); if (t) t.remove(); };
+  nav.addEventListener('contextmenu', e => e.preventDefault());
+  nav.addEventListener('pointerdown', e => {
+    const b = e.target.closest('[data-v]'); if (!b) return;
+    shown = false;
+    timer = setTimeout(() => {
+      const tip = NAV_TIPS[b.dataset.v]; if (!tip) return;
+      shown = true;
+      hide();
+      const r = b.getBoundingClientRect(), el = document.createElement('div');
+      el.className = 'tipbox';
+      el.innerHTML = `<b>${esc(tip[0])}</b>${esc(tip[1])}`;
+      el.style.left = Math.min(Math.max(r.left + r.width / 2, 125), innerWidth - 125) + 'px';
+      document.body.appendChild(el);
+      if (navigator.vibrate) navigator.vibrate(15);
+    }, 450);
+  });
+  const end = () => { clearTimeout(timer); if (shown) setTimeout(hide, 1600); };
+  nav.addEventListener('pointerup', end);
+  nav.addEventListener('pointercancel', end);
+  nav.addEventListener('pointerleave', end);
+  // กดค้างแล้วปล่อย = ดูคำอธิบายอย่างเดียว ไม่กดปุ่ม
+  nav.addEventListener('click', e => { if (shown) { e.stopImmediatePropagation(); e.preventDefault(); shown = false; } }, true);
+})();
 
 /*** ---------- แถบล่าง ---------- ***/
 function navOn(v) {
