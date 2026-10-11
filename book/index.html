@@ -169,10 +169,10 @@ function openSheet(html, onClick) {
 }
 function closeSheet() { const s = $('.shade'); if (s) s.remove(); }
 
-function askConfirm(title, okText, cb) {
+function askConfirm(title, okText, cb, noText) {
   openSheet('<h3>' + esc(title) + '</h3>' +
     '<button class="btn" data-a="yes" style="margin-top:6px">' + esc(okText) + '</button>' +
-    '<button class="link" data-a="no">ไม่ใช่</button>',
+    '<button class="link" data-a="no">' + esc(noText || 'ไม่ใช่') + '</button>',
     a => { closeSheet(); if (a === 'yes') cb(); });
 }
 

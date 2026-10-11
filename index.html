@@ -88,18 +88,33 @@ a{color:inherit;text-decoration:none}
 </style>
 
 <style>
-.stats{display:flex;gap:26px;margin-bottom:18px;font-size:22px;color:var(--mute)}
-.stats .ti{font-size:22px}
-.now{display:flex;align-items:center;gap:14px;padding:16px;margin-bottom:10px}
-.tl{font-size:28px;width:88px;flex-shrink:0}
-.nm{font-size:21px}
-#app .row{padding:15px 0}
-.r-free,.r-block{color:var(--dim)}
-.r-done .tl,.r-done .nm,.r-noshow .tl,.r-noshow .nm{color:var(--mute)}
-.r-noshow .nm{text-decoration:line-through}
-.r-late .tl{color:var(--warn)}
-.row .ic{font-size:26px;color:var(--mute)}
-.row.r-free .ic,.row.r-block .ic{color:var(--dim)}
+#app.fit{height:calc(100dvh - 62px - env(safe-area-inset-bottom));display:flex;flex-direction:column;padding-top:14px;padding-bottom:10px}
+.nowb{display:flex;align-items:stretch;gap:12px;padding:12px 14px;margin-bottom:10px;flex-shrink:0}
+.nstat{border-left:1px solid var(--line2);padding-left:14px;display:flex;flex-direction:column;justify-content:space-around;font-size:21px;color:var(--mute);min-width:70px;font-variant-numeric:lining-nums}
+.grid{flex:1;min-height:0;display:grid;grid-auto-flow:column;grid-template-columns:1fr 1fr;gap:5px;touch-action:none}
+.cell{display:flex;align-items:center;gap:8px;border:1px solid var(--line2);border-radius:9px;padding:0 9px;min-height:0;overflow:hidden;white-space:nowrap;font-size:16px;cursor:pointer;
+  user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;transition:transform .12s,opacity .12s}
+.cell .t{font-family:var(--serif);font-variant-numeric:lining-nums;font-weight:500;font-size:19px;width:50px;flex-shrink:0}
+.cell .n{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.cell.k-booked{border-color:#3E372F}
+.cell.k-free,.cell.k-cont{border-style:dashed;border-color:#3A332C;color:#5E574E}
+.cell.k-cont{border-color:transparent}
+.cell.k-block{color:var(--dim);background:#181512}
+.cell.k-done{color:var(--mute)}
+.cell.k-done .t{text-decoration:line-through}
+.cell.k-noshow{color:var(--mute)}
+.cell.k-noshow .n{text-decoration:line-through}
+.cell.past{opacity:.38}
+.cell.late{opacity:1}
+.cell.late .t{color:var(--warn)}
+.cell.cur{border-color:var(--gold);background:var(--gold-bg);color:var(--gold)}
+.cell.lift{opacity:.3}
+.cell.drop{border:1.5px solid var(--gold);background:var(--gold-bg);color:var(--gold)}
+.grid.dragging .cell.k-free:not(.past){border-color:var(--gold-line)}
+.ghost{position:fixed;left:0;top:0;z-index:40;pointer-events:none;background:var(--gold);color:var(--bg);border-radius:10px;padding:8px 14px;font-size:16px;white-space:nowrap}
+.newbk{position:fixed;left:12px;right:12px;top:calc(10px + env(safe-area-inset-top));z-index:35;display:flex;align-items:center;gap:12px;text-align:left;
+  background:var(--gold);color:var(--bg);border-radius:14px;padding:12px 16px;font-size:16px;line-height:1.4;max-width:420px;margin:0 auto;animation:up .2s ease-out}
+.newbk > .ti:first-child{font-size:26px}
 .dnav{display:flex;align-items:center;gap:4px}
 .dnav button{color:var(--mute);font-size:20px;padding:4px 6px}
 #links summary::-webkit-details-marker{display:none}
@@ -205,10 +220,10 @@ function openSheet(html, onClick) {
 }
 function closeSheet() { const s = $('.shade'); if (s) s.remove(); }
 
-function askConfirm(title, okText, cb) {
+function askConfirm(title, okText, cb, noText) {
   openSheet('<h3>' + esc(title) + '</h3>' +
     '<button class="btn" data-a="yes" style="margin-top:6px">' + esc(okText) + '</button>' +
-    '<button class="link" data-a="no">ไม่ใช่</button>',
+    '<button class="link" data-a="no">' + esc(noText || 'ไม่ใช่') + '</button>',
     a => { closeSheet(); if (a === 'yes') cb(); });
 }
 
@@ -308,6 +323,7 @@ function bindPad(root, onOk, autoLen) {
 async function showLogin() {
   clearInterval(B.timer);
   $('#nav').style.display = 'none';
+  $('#app').className = 'wrap';
   const st = await call('barberStatus');
   const first = !st.hasPin, t1 = first ? 'ตั้ง PIN สำหรับช่าง (4–8 หลัก)' : 'ใส่ PIN';
   $('#app').innerHTML = `<div id="pr" style="text-align:center;padding-top:36px">
@@ -332,7 +348,7 @@ async function boot() {
   try { await loadDay(B.date); } catch (e) { return; }
   keepAwake();
   clearInterval(B.timer);
-  B.timer = setInterval(() => { if (B.view === 'list' && !$('.shade')) loadDay(B.date).catch(() => {}); }, 60000);
+  B.timer = setInterval(() => { if (!drag && !(B.view === 'list' && $('.shade'))) loadDay(B.date).catch(() => {}); }, 30000);
 }
 
 // ให้จอติดค้างไว้ ช่างมองคิวจากไกลได้ (ถ้าเบราว์เซอร์ไม่ยอมก็ข้ามไปเงียบ ๆ)
@@ -343,22 +359,28 @@ async function keepAwake() {
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && B.sess) { keepAwake(); if (B.view === 'list') loadDay(B.date).catch(() => {}); } });
 
 async function loadDay(date) {
-  B.d = await api('barberDay', date || '');
-  B.date = B.d.date;
+  const d = await api('barberDay', date || '');
+  checkNew(d.newest);
+  if (drag) return;
+  B.d = d; B.date = d.date;
   if (B.view === 'list') renderList();
 }
 
 function isToday() { return B.d.date === B.d.today; }
 
-// รวมคิวกับช่วงว่างเป็นเส้นเวลาเดียว
-function timeline() {
-  const d = B.d, items = d.rows.map(r => Object.assign({ kind: r.status }, r));
-  const today = isToday(), past = d.date < d.today;
-  if (!past) d.free.forEach(t => {
-    if (today && toMin(t) + d.slotMin <= d.nowMin) return;
-    items.push({ kind: 'free', time: t });
+// ช่องเวลาทั้งวัน แต่ละช่องผูกกับคิวที่เริ่มในช่วงนั้น
+function cells() {
+  const d = B.d, open = toMin(d.open), close = toMin(d.close), slot = d.slotMin, map = new Map();
+  for (let m = open; m + slot <= close; m += slot) map.set(m, { m: m, r: null });
+  d.rows.forEach(r => {
+    const rm = toMin(r.time);
+    const key = rm >= open && rm < close ? open + Math.floor((rm - open) / slot) * slot : rm;
+    if (!map.has(key)) map.set(key, { m: key, r: null });
+    const c = map.get(key);
+    // คิวที่ยังกินเวลา (รอ/เสร็จ/ปิด) สำคัญกว่าคิวที่ไม่มา
+    if (!c.r || (c.r.status === 'noshow' && r.status !== 'noshow')) c.r = r;
   });
-  return items.sort((a, b) => a.time.localeCompare(b.time));
+  return [...map.values()].sort((a, b) => a.m - b.m);
 }
 
 function currentRow() {
@@ -371,70 +393,163 @@ function currentRow() {
 }
 
 function renderList() {
+  if (drag) return;
   B.view = 'list'; navOn('list');
-  const d = B.d, rows = d.rows;
+  const d = B.d, rows = d.rows, today = isToday();
   const total = rows.filter(r => r.status !== 'block').length;
   const done = rows.filter(r => r.status === 'done').length;
   const wait = rows.filter(r => r.status === 'booked').length;
   const cur = currentRow();
-  const items = timeline();
+  const list = cells(), half = Math.ceil(list.length / 2);
+  const left = cur
+    ? `<div style="flex:1;min-width:0" data-a="row" data-id="${cur.r.id}">
+        <div class="mu" style="font-size:15px">${cur.label}</div>
+        <div class="sv au" style="font-size:52px;line-height:1">${esc(cur.r.time)}</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+          <span style="flex:1;font-size:22px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(cur.r.name)}</span>
+          <button class="ring" data-a="done" data-id="${cur.r.id}" aria-label="เสร็จ" style="width:50px;height:50px;font-size:24px"><i class="ti ti-check"></i></button>
+        </div></div>`
+    : `<div style="flex:1;min-width:0">
+        <div class="mu" style="font-size:15px;${d.closed ? 'color:var(--warn)' : ''}">${d.closed ? 'วันหยุด' : today ? 'ไม่มีคิวรอ' : 'คิววัน' + WD_FULL[wday(d.date)]}</div>
+        <div class="sv ${today ? '' : 'au'}" style="font-size:44px;line-height:1.1;color:${today ? 'var(--dim)' : ''}">${today ? 'ว่าง' : ymd(d.date)[2] + ' ' + MO[ymd(d.date)[1] - 1]}</div></div>`;
+  $('#app').className = 'wrap fit';
   $('#app').innerHTML = `
-    <div class="head">
-      <span class="sv brand">๑๐ กันยา</span>
+    <div class="head" style="margin-bottom:10px">
+      <span class="sv brand" style="font-size:20px">๑๐ กันยา</span>
       <span class="dnav">
         <button data-a="prev" aria-label="วันก่อน"><i class="ti ti-chevron-left"></i></button>
-        <button data-a="today" class="mu" style="font-size:18px;color:${isToday() ? 'var(--gold)' : 'var(--text)'}">${isToday() ? 'วันนี้' : dShort(d.date)}</button>
+        <button data-a="today" style="font-size:17px;color:${today ? 'var(--gold)' : 'var(--text)'}">${today ? 'วันนี้' : dShort(d.date)}</button>
         <button data-a="next" aria-label="วันถัดไป"><i class="ti ti-chevron-right"></i></button>
       </span>
     </div>
-    <div class="stats">
-      <span title="ทั้งหมด"><i class="ti ti-users"></i> ${total}</span>
-      <span title="เสร็จ"><i class="ti ti-check"></i> ${done}</span>
-      <span title="รอ" class="au"><i class="ti ti-hourglass"></i> ${wait}</span>
-      ${d.closed ? '<span style="margin-left:auto;color:var(--warn)"><i class="ti ti-calendar-off"></i> วันหยุด</span>' : ''}
-    </div>
-    ${cur ? `
-    <div class="card now">
-      <div style="flex:1;min-width:0" data-a="row" data-id="${cur.r.id}">
-        <div class="mu" style="font-size:17px">${cur.label}</div>
-        <div class="sv au" style="font-size:64px;line-height:1.1">${esc(cur.r.time)}</div>
-        <div style="font-size:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(cur.r.name)}${cur.r.phone ? ' <span class="mu">· ' + esc(cur.r.phone) + '</span>' : ''}</div>
+    <div class="card nowb">
+      ${left}
+      <div class="nstat">
+        <span title="ทั้งหมด"><i class="ti ti-users"></i> ${total}</span>
+        <span title="เสร็จ"><i class="ti ti-check"></i> ${done}</span>
+        <span title="รอ" class="au"><i class="ti ti-hourglass"></i> ${wait}</span>
       </div>
-      <button class="ring" data-a="done" data-id="${cur.r.id}" aria-label="เสร็จ" style="width:72px;height:72px;font-size:32px"><i class="ti ti-check"></i></button>
-    </div>` : ''}
-    <div>${items.length ? items.map(rowHtml).join('') : '<div class="mu" style="text-align:center;padding:40px 0">ไม่มีคิว</div>'}</div>`;
+    </div>
+    <div class="grid" id="grid" style="grid-template-rows:repeat(${half},minmax(0,1fr))">${list.map(cellHtml).join('')}</div>`;
+  bindDrag($('#grid'));
 }
 
-function rowHtml(r) {
-  const late = r.kind === 'booked' && (B.d.date < B.d.today || (isToday() && toMin(r.time) + r.dur <= B.d.nowMin));
-  const icon = {
-    booked: late ? 'ti-alert-circle' : 'ti-hourglass', done: 'ti-check', noshow: 'ti-user-x',
-    block: 'ti-lock', free: 'ti-plus'
-  }[r.kind];
-  const name = r.kind === 'free' ? 'ว่าง' : r.kind === 'block' ? 'ปิด' :
-    esc(r.name) + (r.source === 'walkin' ? ' <i class="ti ti-walk mu" style="font-size:14px"></i>' : '');
-  return `<div class="row r-${r.kind}${late ? ' r-late' : ''}" data-a="row" data-id="${r.id || ''}" data-t="${r.time}" style="cursor:pointer">
-    <span class="sv tl">${esc(r.time)}</span>
-    <span class="nm" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</span>
-    <i class="ti ${icon} ic"></i></div>`;
+function cellHtml(c) {
+  const d = B.d, r = c.r, time = toHM(c.m);
+  const past = d.date < d.today || (isToday() && c.m + d.slotMin <= d.nowMin);
+  const cur = currentRow();
+  let kind = r ? r.status : d.free.indexOf(time) >= 0 ? 'free' : 'cont';
+  const late = kind === 'booked' && past;
+  const cls = ['cell', 'k-' + kind, past ? 'past' : '', late ? 'late' : '', cur && r && cur.r.id === r.id ? 'cur' : ''].join(' ');
+  const name = kind === 'block' ? '<i class="ti ti-lock"></i>' : kind === 'free' || kind === 'cont' ? '' :
+    esc(r.name) + (r.source === 'walkin' ? ' <i class="ti ti-walk" style="font-size:13px;opacity:.6"></i>' : '');
+  return `<div class="${cls}" data-a="cell" data-t="${time}" ${r ? `data-id="${r.id}"` : ''}>
+    <span class="t">${esc(r ? r.time : time)}</span><span class="n">${name}</span></div>`;
 }
 
 $('#app').addEventListener('click', async e => {
-  if (B.view !== 'list') return;
+  if (B.view !== 'list' || B.justDragged) return;
   const b = e.target.closest('[data-a]'); if (!b) return;
   const a = b.dataset.a;
   if (a === 'prev' || a === 'next') return loadDay(addDays(B.d.date, a === 'prev' ? -1 : 1)).catch(() => {});
   if (a === 'today') return loadDay('').catch(() => {});
   if (a === 'done') return act({ action: 'done', id: b.dataset.id }, 'เสร็จแล้ว');
-  if (a === 'row') {
+  if (a === 'row' || a === 'cell') {
     if (b.dataset.id) {
       const r = B.d.rows.find(x => x.id === b.dataset.id);
       if (!r) { toast('ข้อมูลเปลี่ยน · โหลดใหม่'); return loadDay(B.date).catch(() => {}); }
       return rowSheet(r);
     }
-    return addSheet(b.dataset.t);
+    if (b.classList.contains('k-free') && !b.classList.contains('past')) return addSheet(b.dataset.t);
   }
 });
+
+/*** ---------- กดค้างแล้วลากคิวไปช่องว่าง ---------- ***/
+let drag = null;
+function bindDrag(grid) {
+  let timer = null, sx = 0, sy = 0, ghost = null;
+  grid.oncontextmenu = e => e.preventDefault();
+  grid.onpointerdown = e => {
+    const c = e.target.closest('.cell[data-id]');
+    const r = c && B.d.rows.find(x => x.id === c.dataset.id);
+    if (!r || r.status !== 'booked') return;
+    sx = e.clientX; sy = e.clientY;
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = null;
+      drag = { r: r, src: c, target: null };
+      try { c.setPointerCapture(e.pointerId); } catch (err) {}
+      c.classList.add('lift'); grid.classList.add('dragging');
+      if (navigator.vibrate) navigator.vibrate(30);
+      ghost = document.createElement('div');
+      ghost.className = 'ghost';
+      ghost.innerHTML = `<span class="sv">${esc(r.time)}</span> ${esc(r.name)}`;
+      document.body.appendChild(ghost);
+      moveGhost(sx, sy);
+    }, 450);
+  };
+  const moveGhost = (x, y) => { if (ghost) ghost.style.transform = `translate(${x - 60}px, ${y - 46}px)`; };
+  grid.onpointermove = e => {
+    if (!drag) {
+      if (timer && Math.hypot(e.clientX - sx, e.clientY - sy) > 10) { clearTimeout(timer); timer = null; }
+      return;
+    }
+    e.preventDefault();
+    moveGhost(e.clientX, e.clientY);
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const t = el && el.closest('.cell.k-free:not(.past)');
+    if (drag.target !== t) {
+      if (drag.target) drag.target.classList.remove('drop');
+      if (t) t.classList.add('drop');
+      drag.target = t;
+    }
+  };
+  const end = () => {
+    clearTimeout(timer); timer = null;
+    if (!drag) return;
+    const dd = drag;
+    drag = null;
+    dd.src.classList.remove('lift'); grid.classList.remove('dragging');
+    if (ghost) { ghost.remove(); ghost = null; }
+    B.justDragged = true; setTimeout(() => { B.justDragged = false; }, 350);
+    if (!dd.target) return;
+    dd.target.classList.remove('drop');
+    const to = dd.target.dataset.t;
+    askConfirm(`ย้าย ${dd.r.name} → ${to}`, 'ย้าย', () => act({ action: 'move', id: dd.r.id, date: B.d.date, time: to }, 'ย้ายเป็น ' + to), 'ไม่ย้าย');
+  };
+  grid.onpointerup = end;
+  grid.onpointercancel = end;
+}
+
+/*** ---------- แจ้งเตือนเมื่อลูกค้าจองใหม่ (ตอนเปิดหน้าช่างอยู่) ---------- ***/
+let audioCtx = null;
+document.addEventListener('pointerdown', () => {
+  try { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); } catch (e) {}
+});
+function chime() {
+  if (!audioCtx) return;
+  [[988, 0], [1319, 0.18], [1568, 0.36]].forEach(([f, t]) => {
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain(), at = audioCtx.currentTime + t;
+    o.type = 'sine'; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.35, at + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.5);
+    o.connect(g).connect(audioCtx.destination); o.start(at); o.stop(at + 0.55);
+  });
+}
+function checkNew(n) {
+  if (!n) return;
+  const seen = store.get('k10_seen', null);
+  if (!seen) return store.set('k10_seen', { id: n.id, at: n.at });
+  if (seen.id === n.id || n.at <= seen.at) return;
+  store.set('k10_seen', { id: n.id, at: n.at });
+  chime();
+  if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+  const old = $('.newbk'); if (old) old.remove();
+  const el = document.createElement('button');
+  el.className = 'newbk';
+  el.innerHTML = `<i class="ti ti-bell-ringing"></i><span><b>จองใหม่ · ${esc(n.name)}</b><br>${dShort(n.date)} · <span class="sv">${esc(n.time)}</span></span><i class="ti ti-x" style="margin-left:auto;opacity:.6"></i>`;
+  el.onclick = () => { el.remove(); B.view = 'list'; loadDay(n.date).catch(() => {}); };
+  document.body.appendChild(el);
+}
 
 async function act(p, msg) {
   closeSheet();
@@ -442,6 +557,7 @@ async function act(p, msg) {
   try { r = await api('barberAction', p); } catch (e) { return; }
   if (!r.ok) return toast(r.msg);
   B.d = r.day; B.date = r.day.date;
+  checkNew(r.day.newest);
   if (r.points) B.recent = null;
   renderList();
   if (r.points) msg += ` · +${r.points.earn} แต้ม (รวม ${r.points.member.points})`;
@@ -841,7 +957,8 @@ function adjustSheet(m) {
 }
 
 /*** ---------- แถบล่าง ---------- ***/
-function navOn(v) { document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.v === v)); }
+function navOn(v) {
+  if (v !== 'list') $('#app').className = 'wrap'; document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.v === v)); }
 $('#nav').addEventListener('click', async e => {
   const b = e.target.closest('[data-v]'); if (!b) return;
   const v = b.dataset.v;
