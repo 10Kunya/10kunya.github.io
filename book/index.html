@@ -280,9 +280,9 @@ function showBook(resched) {
     <div class="msg" id="msg"></div>
     <div class="chips sv" id="sugs" style="grid-template-columns:repeat(3,1fr);margin-bottom:22px"></div>
     ${S.resched ? '' : `<div id="who"></div>
-    <details id="refbox" style="margin-top:10px"><summary class="mu" style="cursor:pointer;list-style:none"><i class="ti ti-users-plus"></i> มีเพื่อนแนะนำ? (ลูกค้าใหม่ · ได้คนละ ${d.referralBonus || 0} แต้ม)</summary>
+    ${d.referralBonus ? `<details id="refbox" style="margin-top:10px"><summary class="mu" style="cursor:pointer;list-style:none"><i class="ti ti-users-plus"></i> มีเพื่อนแนะนำ? (ลูกค้าใหม่ · ได้คนละ ${d.referralBonus || 0} แต้ม)</summary>
       <div class="field"><i class="ti ti-phone"></i><input id="rf" placeholder="เบอร์ของเพื่อนที่แนะนำ" inputmode="tel" maxlength="12"></div>
-      <div class="err" id="erf"></div></details>`}
+      <div class="err" id="erf"></div></details>` : ''}`}
     <div class="err" id="ego" style="margin-top:14px"></div>
     <button class="btn" id="go" style="margin-top:18px"></button>
     ${S.resched ? '' : '<div class="mu" style="text-align:center;margin-top:10px;font-size:12px"><i class="ti ti-shield-lock"></i> ร้านเก็บชื่อและเบอร์ไว้เพื่อจองคิวและสะสมแต้มเท่านั้น</div>'}
@@ -533,6 +533,7 @@ function showTickets(focus) {
 const MONTHS_TH = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 function birthHtml(m, bonus) {
   if (m.birthMonth) return `<div class="mu" style="margin-top:10px"><i class="ti ti-cake"></i> เดือนเกิด ${MONTHS_TH[m.birthMonth - 1]}${bonus ? ` · มาตัดในเดือนนี้รับ +${bonus} แต้ม` : ''}</div>`;
+  if (!bonus) return '';   // ร้านปิดโบนัสเดือนเกิดอยู่
   return `<div class="mu" style="margin:14px 0 8px"><i class="ti ti-cake"></i> เลือกเดือนเกิด${bonus ? ` รับ +${bonus} แต้มเมื่อมาตัดในเดือนเกิด` : ''} (เลือกได้ครั้งเดียว)</div>
     <div class="chips" style="grid-template-columns:repeat(6,1fr);gap:6px">${MONTHS_TH.map((n, i) => `<button class="chip" data-bm="${i + 1}" style="font-size:12px;padding:7px 0">${n}</button>`).join('')}</div>`;
 }
