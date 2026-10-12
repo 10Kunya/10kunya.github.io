@@ -160,6 +160,8 @@ details.fold[open] > summary .ti-chevron-down{transform:rotate(180deg)}
 .ed input{background:transparent;border:0;border-bottom:1px solid var(--line2);outline:0;padding:4px 2px;min-width:0;font-size:15px}
 .ed input.n{width:44px;text-align:center;font-family:var(--serif);font-variant-numeric:lining-nums;font-size:17px;color:var(--gold)}
 .ed .x{color:var(--mute);font-size:17px;padding:4px}
+.bsel{background:transparent;border:0;border-bottom:1px solid var(--line2);outline:0;font-family:var(--serif);font-variant-numeric:lining-nums;font-size:16px;color:var(--gold);padding:2px}
+.bsel option{background:var(--card);color:var(--text)}
 .ed small{color:var(--mute);font-size:11px;white-space:nowrap}
 .ed:focus-within{border-color:var(--gold-line)}
 </style>
@@ -423,7 +425,7 @@ function renderList() {
         <div class="mu" style="font-size:15px">${cur.label}</div>
         <div class="sv au" style="font-size:52px;line-height:1">${esc(cur.r.time)}</div>
         <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
-          <span style="flex:1;font-size:22px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(cur.r.name)}</span>
+          <span style="flex:1;min-width:0"><span style="display:block;font-size:22px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(cur.r.name)}</span>${memTags(cur.r)}</span>
           <button class="ring" data-a="done" data-id="${cur.r.id}" aria-label="เสร็จ" style="width:50px;height:50px;font-size:24px"><i class="ti ti-check"></i></button>
         </div></div>`
     : `<div style="flex:1;min-width:0">
@@ -459,7 +461,9 @@ function cellHtml(c) {
   const late = kind === 'booked' && past;
   const cls = ['cell', 'k-' + kind, past ? 'past' : '', late ? 'late' : '', cur && r && cur.r.id === r.id ? 'cur' : ''].join(' ');
   const name = kind === 'block' ? '<i class="ti ti-lock"></i>' : kind === 'free' || kind === 'cont' ? '' :
-    esc(r.name) + (r.source === 'walkin' ? ' <i class="ti ti-walk" style="font-size:13px;opacity:.6"></i>' : '');
+    esc(r.name) + (r.source === 'walkin' && !r.phone ? ' <i class="ti ti-walk" style="font-size:13px;opacity:.6"></i>' : '') +
+    (r.m && r.m.gift ? ' <i class="ti ti-gift au" style="font-size:14px"></i>' : '') +
+    (r.m && r.m.warn ? ' <i class="ti ti-alert-triangle" style="font-size:14px;color:var(--warn)"></i>' : '');
   return `<div class="${cls}" data-a="cell" data-t="${time}" ${r ? `data-id="${r.id}"` : ''}>
     <span class="t">${esc(r ? r.time : time)}</span><span class="n">${name}</span></div>`;
 }
@@ -470,7 +474,7 @@ $('#app').addEventListener('click', async e => {
   const a = b.dataset.a;
   if (a === 'prev' || a === 'next') return loadDay(addDays(B.d.date, a === 'prev' ? -1 : 1)).catch(() => {});
   if (a === 'today') return loadDay('').catch(() => {});
-  if (a === 'done') return act({ action: 'done', id: b.dataset.id }, 'เสร็จแล้ว');
+  if (a === 'done') return doneFlow(b.dataset.id);
   if (a === 'row' || a === 'cell') {
     if (b.dataset.id) {
       const r = B.d.rows.find(x => x.id === b.dataset.id);
@@ -577,8 +581,10 @@ async function act(p, msg) {
   checkNew(r.day.newest);
   if (r.points) B.recent = null;
   renderList();
-  if (r.points) msg += ` · +${r.points.earn} แต้ม (รวม ${r.points.member.points})`;
+  const pt = r.points;
+  if (pt) msg += ` · +${pt.earn} แต้ม${pt.mult > 1 ? ' (×' + pt.mult + ')' : ''}${pt.bonus.length ? ' · ' + pt.bonus.join(' · ') : ''} · รวม ${pt.member.points}`;
   if (msg) toast(msg);
+  if (pt && pt.tierUp) celebrate(`🎉 ${pt.member.name || 'ลูกค้า'} ขึ้นระดับ${pt.tierUp}แล้ว`);
 }
 
 function rowSheet(r) {
@@ -595,7 +601,8 @@ function rowSheet(r) {
   else acts =
     (r.phone ? `<a class="act" href="tel:${esc(r.phone)}"><i class="ti ti-phone"></i>${esc(r.phone)}</a>` : '') +
     '<button class="act" data-a="booked"><i class="ti ti-arrow-back-up"></i>กลับเป็นรอคิว</button>';
-  openSheet(head + acts, a => {
+  openSheet(head + memTags(r) + acts, a => {
+    if (a === 'done') return doneFlow(r.id);
     if (a === 'move') return moveSheet(r, B.d.date);
     if (a === 'cancel') return askConfirm(`ยกเลิกคิว ${r.time} ${r.name}?`, 'ยกเลิกคิว', () => act({ action: 'cancel', id: r.id }, 'ยกเลิกแล้ว'));
     act({ action: a, id: r.id }, { done: 'เสร็จแล้ว', noshow: 'บันทึกว่าไม่มา', unblock: 'เปิดรับคิวแล้ว', booked: 'กลับเป็นรอคิวแล้ว' }[a]);
@@ -743,6 +750,11 @@ function fold(id, icon, title, body) {
     <summary class="mu"><i class="ti ${icon}"></i><span style="flex:1">${title}</span><i class="ti ti-chevron-down"></i></summary>${body}</details>`;
 }
 
+const STEP_TOP = { birthdayBonus: [1, 0, 100], referralBonus: [1, 0, 100], noshowWarn: [1, 1, 20], lostDays: [5, 7, 365] };
+function stepTop(f, v, unit) {
+  return `<span class="stp"><button data-a="stepTop" data-f="${f}" data-d="-1">−</button><b style="min-width:44px">${v}</b><button data-a="stepTop" data-f="${f}" data-d="1">+</button></span><small class="mu" style="width:28px">${unit}</small>`;
+}
+
 function stepper(g, i, f, v) {
   return `<span class="stp"><button data-a="step" data-g="${g}" data-i="${i}" data-f="${f}" data-d="-1">−</button><b>${v}</b><button data-a="step" data-g="${g}" data-i="${i}" data-f="${f}" data-d="1">+</button></span>`;
 }
@@ -805,6 +817,22 @@ function renderSettings() {
       <button class="x" data-a="rdel" data-i="${i}" aria-label="ลบ"><i class="ti ti-x"></i></button>
     </div>`).join('')}
     <button class="mu" data-a="radd" style="font-size:14px;padding:4px 0 8px"><i class="ti ti-plus"></i> เพิ่มรางวัล</button>
+    <div class="mu" style="padding:14px 0 4px"><i class="ti ti-bolt"></i> แต้มคูณ (ช่วงที่ร้านเงียบ)</div>
+    <div class="mu" style="font-size:12px;margin-bottom:8px">คิวที่อยู่ในช่วงนี้ กดเสร็จแล้วได้แต้มคูณ · ลูกค้าเห็นป้าย ×2 ตอนเลือกเวลา</div>
+    ${(s.boosts || []).map((x, i) => `<div class="ed boost" data-i="${i}" style="flex-wrap:wrap">
+      <div class="chips" style="grid-template-columns:repeat(7,1fr);gap:4px;width:100%">
+        ${[1, 2, 3, 4, 5, 6, 0].map(n => `<button class="chip ${x.days.indexOf(n) >= 0 ? 'on' : ''}" data-a="bday" data-i="${i}" data-n="${n}" style="padding:5px 0;font-size:12px">${WD[n].replace('.', '')}</button>`).join('')}
+      </div>
+      <select data-f="from" class="bsel">${timeOpts(x.from)}</select><small>ถึง</small><select data-f="to" class="bsel">${timeOpts(x.to)}</select>
+      <select data-f="mult" class="bsel">${[2, 3, 4, 5].map(n => `<option value="${n}" ${n === x.mult ? 'selected' : ''}>×${n}</option>`).join('')}</select>
+      <button class="x" data-a="bdel" data-i="${i}" aria-label="ลบ" style="margin-left:auto"><i class="ti ti-x"></i></button>
+    </div>`).join('')}
+    <button class="mu" data-a="badd" style="font-size:14px;padding:4px 0 8px"><i class="ti ti-plus"></i> เพิ่มช่วงแต้มคูณ</button>
+    <div class="mu" style="padding:14px 0 4px"><i class="ti ti-sparkles"></i> โบนัสและการเตือน</div>
+    <div class="row"><i class="ti ti-cake"></i><span>โบนัสเดือนเกิด</span>${stepTop('birthdayBonus', s.birthdayBonus, 'แต้ม')}</div>
+    <div class="row"><i class="ti ti-users-plus"></i><span>ชวนเพื่อน (ได้คนละ)</span>${stepTop('referralBonus', s.referralBonus, 'แต้ม')}</div>
+    <div class="row"><i class="ti ti-alert-triangle"></i><span>เตือนเมื่อไม่มาถึง</span>${stepTop('noshowWarn', s.noshowWarn, 'ครั้ง')}</div>
+    <div class="row"><i class="ti ti-user-question"></i><span>ลูกค้าหายเมื่อไม่มาเกิน</span>${stepTop('lostDays', s.lostDays, 'วัน')}</div>
     <div class="mu" style="padding:14px 0 0"><i class="ti ti-ticket"></i> แสดงบนตั๋วลูกค้า</div>
     <div class="field"><i class="ti ti-phone"></i><input id="sp" placeholder="เบอร์ร้าน" inputmode="tel" value="${esc(s.phone)}"></div>
     <div class="field"><i class="ti ti-map-pin"></i><input id="sm" placeholder="ลิงก์ Google Maps ของร้าน" value="${esc(s.mapUrl)}"></div>
@@ -832,6 +860,10 @@ function readSettings() {
   s.phone = $('#sp').value.trim(); s.mapUrl = $('#sm').value.trim();
   const f = (el, k) => $('input[data-f="' + k + '"]', el).value;
   s.tiers = [...document.querySelectorAll('.ed.tier')].map(el => ({ name: f(el, 'name'), min: +f(el, 'min') || 0, earn: +f(el, 'earn') || 0 }));
+  s.boosts = [...document.querySelectorAll('.ed.boost')].map(el => {
+    const i = +el.dataset.i, g = k => $('select[data-f="' + k + '"]', el).value;
+    return { days: s.boosts[i].days.slice(), from: g('from'), to: g('to'), mult: +g('mult') };
+  });
   s.rewards = [...document.querySelectorAll('.ed.reward')].map(el => ({ icon: f(el, 'icon'), name: f(el, 'name'), cost: +f(el, 'cost') || 0 }));
 }
 
@@ -851,6 +883,10 @@ $('#app').addEventListener('click', async e => {
   if (a === 'qrcopy') return copyText(s.url);
   if (a === 'pushOn' || a === 'pushOff' || a === 'pushTest') return pushAction(a, b);
   if (a === 'copy') return copyText(b.dataset.u);
+  if (a === 'stepTop') { const [st, lo, hi] = STEP_TOP[b.dataset.f]; s[b.dataset.f] = Math.max(lo, Math.min(hi, (+s[b.dataset.f] || 0) + st * (+b.dataset.d))); return renderSettings(); }
+  if (a === 'badd') { s.boosts = s.boosts || []; s.boosts.push({ days: [1, 2], from: '10:00', to: '14:00', mult: 2 }); return renderSettings(); }
+  if (a === 'bdel') { s.boosts.splice(+b.dataset.i, 1); return renderSettings(); }
+  if (a === 'bday') { const d = s.boosts[+b.dataset.i].days, n = +b.dataset.n, k = d.indexOf(n); k >= 0 ? d.splice(k, 1) : d.push(n); return renderSettings(); }
   if (a === 'step') {
     const o = s[b.dataset.g][+b.dataset.i], f = b.dataset.f, step = f === 'min' ? 5 : 1;
     o[f] = Math.max(f === 'min' ? step : 1, o[f] + step * (+b.dataset.d));
@@ -896,6 +932,7 @@ async function showMembers(q) {
   $('#app').innerHTML = `
     <div class="head"><span class="sv brand">สมาชิก</span>
       <button class="mu" data-m="add" style="font-size:14px"><i class="ti ti-plus"></i> ลงแต้มลูกค้าเก่า</button></div>
+    <div id="mst"></div>
     <div class="field"><i class="ti ti-search"></i><input id="mq" placeholder="เบอร์ (4 ตัวท้ายก็ได้) หรือชื่อ" value="${esc(q || '')}" autocomplete="off"></div>
     <div id="ml" style="margin-top:6px"><div class="load" style="padding:40px 0"><i class="ti ti-scissors"></i></div></div>`;
   let timer;
@@ -913,6 +950,21 @@ async function showMembers(q) {
   };
   $('#mq').addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(load, 300); });
   load();
+  loadStats();
+}
+
+async function loadStats() {
+  let x;
+  try { x = await api('barberMemberStats'); } catch (e) { return; }
+  if (B.view !== 'mem' || !$('#mst')) return;
+  const box = (v, l) => `<div class="card" style="padding:10px 6px;text-align:center"><div class="sv au" style="font-size:24px;line-height:1.1">${v}</div><div class="mu" style="font-size:12px">${l}</div></div>`;
+  $('#mst').innerHTML = `<div class="mu" style="margin-bottom:6px"><i class="ti ti-chart-bar"></i> เดือนนี้</div>
+    <div class="chips" style="grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">${box(x.newMembers, 'สมาชิกใหม่')}${box(x.given, 'แต้มที่แจก')}${box(x.redeems, 'แลกรางวัล')}</div>
+    ${x.top.length ? `<div class="mu" style="margin-bottom:10px">มาบ่อยสุด: ${x.top.map(t => esc(t.name) + ' ' + t.count).join(' · ')}</div>` : ''}
+    ${x.lost.length ? fold('lost', 'ti-user-question', `ลูกค้าที่หายไป (เกิน ${x.lostDays} วัน) · ${x.lost.length} คน`, x.lost.map(l => `<div class="row" style="padding:9px 0">
+        <span style="flex:1;min-width:0">${esc(l.name || l.phone)}<span class="mu" style="display:block">มา ${l.visits} ครั้ง · ล่าสุด ${l.days} วันก่อน</span></span>
+        <a class="au" href="tel:${esc(l.phone)}" style="font-size:20px;padding:4px 8px" aria-label="โทร"><i class="ti ti-phone"></i></a></div>`).join('')) : ''}`;
+  const d = $('#lost'); if (d) d.ontoggle = () => { B.open.lost = d.open; };
 }
 
 $('#app').addEventListener('click', e => {
@@ -922,35 +974,153 @@ $('#app').addEventListener('click', e => {
   if (b.dataset.m === 'add') return adjustSheet();
 });
 
+const KIND = { visit: 'มาตัด', undo: 'ย้อนคิว', redeem: 'แลก', unredeem: 'ยกเลิกแลก', adjust: 'ปรับแต้ม', birthday: 'โบนัสเดือนเกิด', referral: 'ชวนเพื่อน', merge: 'รวมบัญชี' };
+const MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+const refreshMembers = () => { if (B.view === 'mem') showMembers($('#mq') ? $('#mq').value : ''); };
+
 async function memberSheet(phone) {
   const r = await api('barberMember', phone).catch(() => null);
   if (!r) return;
   if (!r.ok) return toast(r.msg);
-  const m = r.member, kind = { visit: 'มาตัด', undo: 'ย้อนคิว', redeem: 'แลก', adjust: 'ปรับแต้ม' };
+  const m = r.member;
+  const info = [
+    `มา ${m.visits} ครั้ง`,
+    m.noshow ? `<span style="color:${m.warn ? 'var(--warn)' : 'var(--mute)'}">ค่าเตือนไม่มา ${m.noshow}${m.warn ? ' ⚠' : ''}</span>` : '',
+    m.birthMonth ? '🎂 ' + MONTHS[m.birthMonth - 1] : '',
+    m.referredBy ? 'เพื่อนแนะนำ ' + esc(m.referredBy.slice(-4)) : ''
+  ].filter(Boolean).join(' · ');
   const sh = openSheet(`${memberCard(m)}
+    <div class="mu" style="margin:8px 2px 0">${info}</div>
     ${r.rewards.length ? `<div class="mu" style="margin:16px 0 8px"><i class="ti ti-gift"></i> แลกรางวัล</div>${rewardList(r.rewards, m.points, true)}` : ''}
-    <button class="act" data-a="adj" style="margin-top:6px"><i class="ti ti-plus-minus"></i>ปรับแต้ม</button>
-    ${m.phone ? `<a class="act" href="tel:${esc(m.phone)}"><i class="ti ti-phone"></i>${esc(m.phone)}</a>` : ''}
-    <div class="mu" style="margin:14px 0 4px"><i class="ti ti-history"></i> ประวัติล่าสุด</div>
-    ${r.history.map(h => `<div class="row" style="padding:8px 0;font-size:13px">
-      <span class="mu" style="width:84px">${dShort(h.at.slice(0, 10))}</span>
-      <span style="flex:1">${kind[h.kind] || h.kind}${h.note ? ' · ' + esc(h.note) : ''}</span>
-      <span class="sv ${h.delta > 0 ? 'au' : ''}" style="font-size:16px">${h.delta > 0 ? '+' : ''}${h.delta}</span></div>`).join('')}`,
+    <div class="chips" style="grid-template-columns:1fr 1fr;margin-top:12px">
+      <button class="chip" data-a="adj"><i class="ti ti-plus-minus"></i> ปรับแต้ม</button>
+      ${m.phone ? `<a class="chip" href="tel:${esc(m.phone)}"><i class="ti ti-phone"></i> โทร</a>` : ''}
+      <button class="chip" data-a="name"><i class="ti ti-pencil"></i> แก้ชื่อ</button>
+      <button class="chip" data-a="phone"><i class="ti ti-device-mobile"></i> เปลี่ยนเบอร์</button>
+      <button class="chip" data-a="merge"><i class="ti ti-arrows-join"></i> รวมบัญชี</button>
+      <button class="chip" data-a="birth"><i class="ti ti-cake"></i> เดือนเกิด</button>
+      ${m.noshow ? '<button class="chip" data-a="clearns"><i class="ti ti-eraser"></i> ล้างค่าเตือนไม่มา</button>' : ''}
+      <button class="chip" data-a="del" style="color:var(--warn)"><i class="ti ti-trash"></i> ลบข้อมูล</button>
+    </div>
+    <div class="mu" style="margin:16px 0 4px"><i class="ti ti-history"></i> ประวัติล่าสุด</div>
+    ${r.history.map(h => `<div class="row" style="padding:8px 0;font-size:13px${h.undone ? ';opacity:.45' : ''}">
+      <span class="mu" style="width:78px">${dShort(h.at.slice(0, 10))}</span>
+      <span style="flex:1${h.undone ? ';text-decoration:line-through' : ''}">${KIND[h.kind] || h.kind}${h.note ? ' · ' + esc(h.note) : ''}</span>
+      ${h.canUndo ? `<button class="au" data-a="unredeem" data-id="${h.id}" style="font-size:12px;border:1px solid var(--gold-line);border-radius:6px;padding:2px 8px">ยกเลิก</button>` : ''}
+      <span class="sv ${h.delta > 0 ? 'au' : ''}" style="font-size:16px;min-width:34px;text-align:right">${h.delta > 0 ? '+' : ''}${h.delta}</span></div>`).join('')}`,
     (a, b) => {
+      const done = (x, msg) => { if (!x) return; if (!x.ok) return toast(x.msg); toast(msg); memberSheet(x.member.phone); refreshMembers(); };
       if (a === 'adj') return adjustSheet(m);
+      if (a === 'name') return textSheet('แก้ชื่อ', 'ชื่อ', m.name, 'text', async v => done(await api('barberMemberEdit', m.phone, { name: v }).catch(() => null), 'แก้ชื่อแล้ว'));
+      if (a === 'phone') return textSheet('เปลี่ยนเบอร์', 'เบอร์ใหม่', '', 'tel', async v => done(await api('barberMemberPhone', m.phone, v).catch(() => null), 'เปลี่ยนเบอร์แล้ว'));
+      if (a === 'merge') return mergeSheet(m);
+      if (a === 'birth') return monthSheet(m.birthMonth, async v => done(await api('barberMemberEdit', m.phone, { birthMonth: v }).catch(() => null), 'บันทึกเดือนเกิดแล้ว'));
+      if (a === 'clearns') return askConfirm('ล้างค่าเตือนไม่มาของ ' + m.name + '?', 'ล้างค่าเตือน', async () =>
+        done(await api('barberMemberEdit', m.phone, { clearNoshow: true }).catch(() => null), 'ล้างค่าเตือนแล้ว'));
+      if (a === 'del') return askConfirm(`ลบข้อมูล ${m.name || m.phone}?`, 'ลบข้อมูล', () =>
+        askConfirm('ยืนยันอีกครั้ง: ลบชื่อ เบอร์ และแต้มทั้งหมด กู้คืนไม่ได้', 'ลบถาวร', async () => {
+          const x = await api('barberMemberDelete', m.phone).catch(() => null);
+          if (!x) return;
+          if (!x.ok) return toast(x.msg);
+          closeSheet(); toast('ลบข้อมูลแล้ว'); B.recent = null; refreshMembers();
+        }, 'ไม่ลบ'), 'ไม่ลบ');
+      if (a === 'unredeem') return askConfirm('ยกเลิกการแลกนี้ และคืนแต้ม?', 'ยกเลิกการแลก', async () =>
+        done(await api('barberUnredeem', m.phone, b.dataset.id).catch(() => null), 'คืนแต้มแล้ว'));
       if (a === 'redeem') {
         const rw = r.rewards[+b.dataset.i];
         askConfirm(`แลก ${rw.name} ใช้ ${rw.cost} แต้ม?`, 'แลกรางวัล', async () => {
           const x = await api('barberRedeem', m.phone, +b.dataset.i).catch(() => null);
-          if (!x) return;
-          if (!x.ok) return toast(x.msg);
-          toast(`แลก${rw.name}แล้ว · เหลือ ${x.member.points} แต้ม`);
-          memberSheet(m.phone);
-          if (B.view === 'mem') showMembers($('#mq') ? $('#mq').value : '');
+          done(x, x && x.ok ? `แลก${rw.name}แล้ว · เหลือ ${x.member.points} แต้ม` : '');
         });
       }
     });
   return sh;
+}
+
+// กล่องพิมพ์ข้อความสั้น (ใช้เฉพาะที่ต้องพิมพ์จริง ๆ)
+function textSheet(title, ph, value, type, onSave) {
+  const sh = openSheet(`<h3>${esc(title)}</h3>
+    <div class="field"><i class="ti ti-${type === 'tel' ? 'phone' : 'user'}"></i><input id="tx" value="${esc(value || '')}" placeholder="${esc(ph)}" ${type === 'tel' ? 'inputmode="tel" maxlength="12"' : 'maxlength="40"'}></div>
+    <button class="btn" data-a="ok" style="margin-top:16px">บันทึก</button>`, a => { if (a === 'ok') onSave($('#tx', sh).value.trim()); });
+  setTimeout(() => $('#tx', sh).focus(), 50);
+}
+function monthSheet(cur, onPick) {
+  openSheet(`<h3>เดือนเกิด</h3><div class="chips" style="grid-template-columns:repeat(4,1fr)">
+    ${MONTHS.map((n, i) => `<button class="chip ${cur === i + 1 ? 'on' : ''}" data-a="m" data-v="${i + 1}">${n}</button>`).join('')}</div>
+    <button class="link" data-a="m" data-v="0">ไม่ระบุ</button>`, (a, b) => { if (a === 'm') onPick(+b.dataset.v); });
+}
+// รวมบัญชี: เลือกบัญชีปลายทาง แล้วย้ายทุกอย่างของบัญชีนี้ไปรวม
+function mergeSheet(m) {
+  const sh = openSheet(`<h3>รวมบัญชี ${esc(m.name || m.phone)}</h3>
+    <div class="mu" style="margin-bottom:10px">ย้ายแต้ม ยอดสะสม และจำนวนครั้งของ ${esc(m.phone)} ไปรวมกับบัญชีที่เลือก แล้วลบ ${esc(m.phone)}</div>
+    <div class="field"><i class="ti ti-search"></i><input id="mg" placeholder="เบอร์ (4 ตัวท้ายก็ได้) หรือชื่อ" autocomplete="off"></div>
+    <div id="mgr" class="chips" style="grid-template-columns:1fr 1fr;margin-top:10px"></div>`, (a, b) => {
+      if (a !== 'into') return;
+      askConfirm(`รวม ${m.phone} เข้ากับ ${b.dataset.n} (${b.dataset.p})?`, 'รวมบัญชี', async () => {
+        const x = await api('barberMemberMerge', m.phone, b.dataset.p).catch(() => null);
+        if (!x) return;
+        if (!x.ok) return toast(x.msg);
+        toast('รวมบัญชีแล้ว · มี ' + x.member.points + ' แต้ม'); B.recent = null;
+        memberSheet(x.member.phone); refreshMembers();
+      });
+    });
+  let tm;
+  $('#mg', sh).addEventListener('input', e => {
+    clearTimeout(tm);
+    tm = setTimeout(async () => {
+      const q = e.target.value.trim();
+      const list = q ? (await api('barberMembers', q).catch(() => [])).filter(x => x.phone !== m.phone).slice(0, 6) : [];
+      $('#mgr', sh).innerHTML = list.map(x => `<button class="chip" data-a="into" data-p="${esc(x.phone)}" data-n="${esc(x.name || '—')}">${esc(x.name || '—')}<small>${esc(x.phone)}</small></button>`).join('');
+    }, 300);
+  });
+  setTimeout(() => $('#mg', sh).focus(), 50);
+}
+
+// กดเสร็จคิวที่ไม่มีเบอร์ → ถามว่าให้แต้มใคร
+async function doneFlow(id) {
+  const r = B.d.rows.find(x => x.id === id);
+  if (!r) return;
+  if (r.phone) return act({ action: 'done', id: id }, 'เสร็จแล้ว');
+  if (!B.recent) B.recent = (await api('barberMembers', '').catch(() => [])).slice(0, 8);
+  const st = { nn: '', np: '' };
+  const sh = openSheet(`<h3>ให้แต้มใคร?</h3>
+    <div class="chips" style="grid-template-columns:1fr 1fr">
+      ${B.recent.map(m => `<button class="chip" data-a="who" data-p="${esc(m.phone)}" data-n="${esc(m.name)}">${esc(m.name || m.phone)}<small>${esc(m.phone.slice(-4))}</small></button>`).join('')}
+    </div>
+    <div class="mu" style="margin-top:12px">ลูกค้าใหม่ / คนอื่น</div>
+    <div class="field"><i class="ti ti-phone"></i><input id="gp" placeholder="เบอร์โทร" inputmode="tel" maxlength="12"></div>
+    <div class="field"><i class="ti ti-user"></i><input id="gn" placeholder="ชื่อ (ไม่ใส่ก็ได้)" maxlength="40"></div>
+    <div class="err" id="ge"></div>
+    <button class="btn" data-a="new" style="margin-top:14px">ให้แต้ม</button>
+    <button class="link" data-a="skip">ข้าม · ไม่ให้แต้ม</button>`, (a, b) => {
+      if (a === 'who') return act({ action: 'done', id: id, phone: b.dataset.p, name: b.dataset.n }, 'เสร็จแล้ว');
+      if (a === 'skip') return act({ action: 'done', id: id }, 'เสร็จแล้ว');
+      if (a === 'new') {
+        const p = $('#gp', sh).value.replace(/\D/g, '');
+        if (!/^0\d{8,9}$/.test(p)) { $('#ge', sh).textContent = 'ใส่เบอร์โทร 10 หลัก'; return; }
+        act({ action: 'done', id: id, phone: p, name: $('#gn', sh).value }, 'เสร็จแล้ว');
+      }
+    });
+}
+
+// ข้อความฉลองตอนลูกค้าขึ้นระดับ
+function celebrate(text) {
+  const old = $('.newbk'); if (old) old.remove();
+  const el = document.createElement('button');
+  el.className = 'newbk';
+  el.innerHTML = `<i class="ti ti-confetti"></i><span><b>${esc(text)}</b></span>`;
+  el.onclick = () => el.remove();
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 6000);
+}
+
+// ป้ายสมาชิกบนคิว
+function memTags(r) {
+  const m = r && r.m;
+  if (!m) return '';
+  return `<span style="display:inline-flex;gap:5px;flex-wrap:wrap;margin-top:4px">${tierBadge({ idx: m.idx, count: m.count, name: m.tier })}
+    ${m.gift ? '<span class="badge" style="background:var(--gold);color:var(--bg);border-color:var(--gold)"><i class="ti ti-gift"></i> แลกได้</span>' : ''}
+    ${m.warn ? '<span class="badge" style="border-color:var(--warn);color:var(--warn)"><i class="ti ti-alert-triangle"></i> เคยไม่มา</span>' : ''}</span>`;
 }
 
 function adjustSheet(m) {
@@ -978,7 +1148,7 @@ function adjustSheet(m) {
       if (!r.ok) { $('#je', sh).textContent = r.msg; return; }
       toast('บันทึกแล้ว · มี ' + r.member.points + ' แต้ม');
       memberSheet(r.member.phone);
-      if (B.view === 'mem') showMembers($('#mq') ? $('#mq').value : '');
+      refreshMembers();
     });
 }
 
@@ -1075,6 +1245,18 @@ const MANUAL = `
     <li>ระดับวัดจากแต้มสะสมรวม แลกรางวัลแล้วระดับไม่ลด ระดับสูงได้แต้มต่อครั้งมากขึ้น</li>
     <li>แตะชื่อสมาชิก → แลกรางวัล (ลูกค้าแลกเองไม่ได้) / ปรับแต้ม / ดูประวัติ</li>
     <li>"ลงแต้มลูกค้าเก่า" ใช้กับลูกค้าที่มีบัตรสะสมกระดาษ</li>
+    <li>บัตรสมาชิก: แก้ชื่อ · เปลี่ยนเบอร์ · รวมบัญชี (ลูกค้ามี 2 เบอร์) · เดือนเกิด · ลบข้อมูลตามที่ลูกค้าขอ</li>
+    <li>แลกผิด: กด "ยกเลิก" ที่รายการแลกในประวัติ (ได้เฉพาะของวันนี้) แต้มคืนครบ</li>
+    <li>คิวที่ไม่มีเบอร์ กดเสร็จแล้วจะถามว่าให้แต้มใคร (เลือกลูกค้าประจำ / ใส่เบอร์ / ข้าม)</li>
+    <li>ป้ายบนคิว: <i class="ti ti-gift"></i> แต้มพอแลกรางวัล · <i class="ti ti-alert-triangle"></i> เคยไม่มาหลายครั้ง (มาตัด 1 ครั้งลดลง 1 · ล้างเองได้ในบัตรสมาชิก)</li>
+    <li>ลูกค้าขึ้นระดับ จะมีแถบทองแจ้งให้บอกลูกค้า</li>
+    <li>แท็บสมาชิกด้านบน: สรุปเดือนนี้ และ "ลูกค้าที่หายไป" พร้อมปุ่มโทร</li>
+  </ul>
+  <h4><i class="ti ti-bolt"></i> โปรโมชั่นแต้ม</h4>
+  <ul>
+    <li>แต้มคูณ: ตั้งวัน + ช่วงเวลา + ×2–×5 คิวในช่วงนั้นได้แต้มคูณ ลูกค้าเห็นป้ายตอนเลือกเวลา</li>
+    <li>เดือนเกิด: ลูกค้าเลือกเดือนเกิดในบัตรสมาชิก มาตัดครั้งแรกของเดือนนั้นได้โบนัส (ปีละครั้ง)</li>
+    <li>ชวนเพื่อน: ลูกค้าใหม่ใส่เบอร์ผู้ชวนตอนจอง พอมาตัดครั้งแรกเสร็จ ได้แต้มทั้งคู่</li>
   </ul>
   <h4><i class="ti ti-share"></i> แชร์ให้ลูกค้า</h4>
   <ul>
