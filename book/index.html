@@ -70,6 +70,12 @@ a{color:inherit;text-decoration:none}
 .grab{position:absolute;top:8px;left:50%;width:40px;height:4px;margin-left:-20px;border-radius:2px;background:var(--line2)}
 .sx{position:absolute;top:12px;right:12px;width:36px;height:36px;border-radius:50%;color:var(--mute);font-size:20px;display:flex;align-items:center;justify-content:center;z-index:1}
 .sheet h3{padding-right:36px}
+@media (min-width:700px){
+  .shade{align-items:center;padding:24px}
+  .sheet{border-radius:20px;border-bottom:1px solid var(--line2);max-width:520px;max-height:85%;padding:28px 26px 24px;animation:pop .18s ease-out}
+  .grab{display:none}
+}
+@keyframes pop{from{transform:scale(.96);opacity:0}}
 .sheet h3{margin:0 0 14px;font-weight:500;font-size:20px}
 .act{display:flex;align-items:center;gap:14px;width:100%;padding:14px 2px;border-bottom:1px solid var(--line);text-align:left;font-size:16px}
 .act i{font-size:20px;color:var(--mute);width:22px}
@@ -95,13 +101,20 @@ a{color:inherit;text-decoration:none}
 
 <style>
 .wheel-wrap{position:relative;margin:0 -20px 12px}
-.wheel{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;padding:0 calc(50% - 38px);
+.wheel{--iw:76px;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;padding:0 calc(50% - var(--iw) / 2);
   -webkit-mask-image:linear-gradient(90deg,transparent,#000 30%,#000 70%,transparent);mask-image:linear-gradient(90deg,transparent,#000 30%,#000 70%,transparent)}
 .wheel::-webkit-scrollbar{display:none}
-.wheel button{flex:0 0 76px;height:72px;scroll-snap-align:center;font-family:var(--serif);font-variant-numeric:lining-nums;font-weight:500;font-size:21px;color:var(--dim);transition:color .15s,font-size .15s}
+.wheel button{flex:0 0 var(--iw);height:72px;scroll-snap-align:center;font-family:var(--serif);font-variant-numeric:lining-nums;font-weight:500;font-size:21px;color:var(--dim);transition:color .15s,font-size .15s}
 .wheel button.mid{color:var(--text);font-size:32px}
+.wheel-wrap{--iw:76px}
+@media (min-width:700px){
+  .wrap{max-width:520px}
+  .wheel,.wheel-wrap{--iw:100px}
+  .wheel button{height:92px;font-size:26px}
+  .wheel button.mid{font-size:42px}
+}
 .wheel .bx{font-family:var(--sans);font-size:11px;color:var(--gold);margin-left:2px}
-.wheel-mark{position:absolute;left:50%;top:6px;bottom:6px;width:84px;margin-left:-42px;border:1px solid var(--gold-line);border-radius:12px;pointer-events:none}
+.wheel-mark{position:absolute;left:50%;top:6px;bottom:6px;width:calc(var(--iw) + 8px);margin-left:calc(var(--iw) / -2 - 4px);border:1px solid var(--gold-line);border-radius:12px;pointer-events:none}
 .msg{font-size:13px;margin-bottom:10px;min-height:20px}
 .msg.warn{color:var(--warn)}
 .msg.ok{color:var(--ok)}
@@ -409,7 +422,8 @@ function renderDays() {
 }
 
 /*** ---------- วงล้อเวลา (เลื่อนซ้าย-ขวา) ---------- ***/
-const ITEM_W = 76;
+// ความกว้างแต่ละช่องของวงล้อ (มือถือ 76 / แท็บเล็ต 100) อ่านจากหน้าจอจริง
+const itemW = () => { const b = $('#wh') && $('#wh').firstElementChild; return (b && b.offsetWidth) || 76; };
 let spinT;
 // ตัวคูณแต้มของเวลานั้น (ตามที่ร้านตั้งไว้)
 function boostOf(ds, t) {
@@ -431,7 +445,7 @@ function renderWheel(want) {
     markMid();
     clearTimeout(spinT);
     spinT = setTimeout(() => {
-      const t = list[Math.max(0, Math.min(list.length - 1, Math.round(wh.scrollLeft / ITEM_W)))];
+      const t = list[Math.max(0, Math.min(list.length - 1, Math.round(wh.scrollLeft / itemW())))];
       if (t !== S.time) { S.time = t; S.pick = null; evaluate(); }
     }, 120);
   };
@@ -442,11 +456,11 @@ function renderWheel(want) {
 function spinTo(t, smooth) {
   const wh = $('#wh'), i = [...wh.children].findIndex(b => b.dataset.w === t);
   if (i < 0) return;
-  wh.scrollTo({ left: i * ITEM_W, behavior: smooth ? 'smooth' : 'auto' });
+  wh.scrollTo({ left: i * itemW(), behavior: smooth ? 'smooth' : 'auto' });
   markMid();
 }
 function markMid() {
-  const wh = $('#wh'), i = Math.round(wh.scrollLeft / ITEM_W);
+  const wh = $('#wh'), i = Math.round(wh.scrollLeft / itemW());
   [...wh.children].forEach((b, j) => b.classList.toggle('mid', j === i));
 }
 
