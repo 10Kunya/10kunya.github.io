@@ -313,7 +313,7 @@ async function copyText(text) {
 
 <script>
 const URL_TOKEN = (new URLSearchParams(location.search).get('t') || '').replace(/\W/g, '');
-const S = { d: null, day: '', time: '', pick: null, mode: 'book', resched: null };
+const S = { d: null, day: '', time: '', pick: null, mode: 'book', resched: null, forOther: false };
 
 /*** ---------- โหลด ---------- ***/
 async function load(except) {
@@ -322,12 +322,38 @@ async function load(except) {
   try {
     S.d = await call('getAvailability', toks, except || '');
   } catch (e) {
-    $('#app').innerHTML = '<div class="load mu" style="font-size:15px">โหลดไม่สำเร็จ · ลองรีเฟรชอีกครั้ง</div>';
+    if (!S.d) {   // ยังไม่เคยโหลดได้เลย → หน้าลองใหม่ (ถ้าเคยโหลดแล้ว คงหน้าเดิมไว้)
+      $('#app').innerHTML = `<div style="text-align:center;padding:90px 0">
+        <i class="ti ti-wifi-off" style="font-size:34px;color:var(--dim)"></i>
+        <div style="margin:12px 0 4px">โหลดไม่สำเร็จ</div><div class="mu" style="margin-bottom:22px">ตรวจสัญญาณอินเทอร์เน็ต แล้วลองใหม่</div>
+        <button class="btn" id="retry" style="max-width:220px;margin:0 auto"><i class="ti ti-refresh"></i> ลองใหม่</button></div>`;
+      $('#retry').onclick = () => { $('#app').innerHTML = '<div class="load"><i class="ti ti-scissors"></i></div>'; start(); };
+    }
     return false;
   }
+  // ตั๋วที่ร้านยกเลิกให้ (ลูกค้ายกเลิกเองจะถูกลบออกจากเครื่องไปก่อนแล้ว) → แจ้งครั้งเดียว
+  S.notice = (S.d.cancelled || []).slice();
   store.set('k10_tickets', S.d.tickets.map(t => t.token));
+  S.loadedAt = Date.now();
   return true;
 }
+
+// แถบแจ้งว่าร้านยกเลิกคิวให้
+function noticeHtml() {
+  if (!S.notice || !S.notice.length) return '';
+  const n = S.notice; S.notice = [];
+  return n.map(t => `<div class="card" style="padding:12px 14px;margin-bottom:16px;border-color:var(--warn);color:var(--warn);display:flex;gap:10px;align-items:center">
+    <i class="ti ti-calendar-x" style="font-size:22px"></i><span style="flex:1">ร้านยกเลิกคิว ${dShort(t.date)} ${esc(t.time)} ของคุณ${esc(t.name)}แล้ว
+    <span class="mu" style="display:block">จองเวลาใหม่ได้ด้านล่าง${S.d.phone ? ' หรือโทรถามร้าน' : ''}</span></span>
+    ${S.d.phone ? `<a href="tel:${esc(S.d.phone)}" style="font-size:22px;padding:6px" aria-label="โทรหาร้าน"><i class="ti ti-phone"></i></a>` : ''}</div>`).join('');
+}
+
+// ทิ้งหน้าไว้นานแล้วกลับมา → โหลดคิวว่างใหม่ (กันเวลาที่ผ่านไปแล้ว/คิวที่ถูกจองไปแล้ว)
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState !== 'visible' || !S.d || Date.now() - (S.loadedAt || 0) < 60000 || $('.shade')) return;
+  if (S.mode === 'book' && !S.resched) { const keep = S.time; if (await load()) { S.time = keep; showBook(); } }
+  else if (S.mode === 'ticket') { if (await load()) S.d.tickets.length ? showTickets() : showBook(); }
+});
 
 async function start() {
   if (!await load()) return;
@@ -351,9 +377,10 @@ function slotsOf(date) {
 }
 function freeOf(date) { return (S.d.days.find(x => x.date === date) || { free: [] }).free; }
 
-function showBook(resched) {
+function showBook(resched, forOther) {
   S.mode = 'book';
   S.resched = resched || null;
+  S.forOther = !!forOther;
   if (!S.day || !S.d.days.some(x => x.date === S.day && !x.closed)) S.day = firstDay();
   const me = store.get('k10_me', {});
   const d = S.d;
@@ -363,7 +390,9 @@ function showBook(resched) {
       <div class="mu">${esc(d.open)} – ${esc(d.close)} · ${esc(closedText(d.closedDays))}</div></div>
       ${S.resched ? '' : '<button id="mem" class="mu" style="font-size:13px;text-align:center"><i class="ti ti-id-badge-2 au" style="font-size:22px"></i><br>สมาชิก</button>'}
     </div>
+    ${noticeHtml()}
     ${S.resched ? `<div class="mu" style="margin:-8px 0 16px"><i class="ti ti-pencil"></i> เลื่อนคิวเดิม ${dShort(S.resched.date)} ${esc(S.resched.time)}</div>` : ''}
+    ${S.forOther ? '<div class="mu" style="margin:-8px 0 16px"><i class="ti ti-user-plus"></i> จองให้คนอื่น · ใส่ชื่อและเบอร์ของคนที่จะมาตัด</div>' : ''}
     <div class="chips" id="days" style="grid-template-columns:repeat(${Math.min(d.days.length, 4)},1fr);margin-bottom:22px"></div>
     <div class="mu" style="margin-bottom:6px"><i class="ti ti-clock"></i> เลื่อนเลือกเวลา</div>
     <div class="wheel-wrap"><div class="wheel" id="wh"></div><div class="wheel-mark"></div></div>
@@ -380,7 +409,7 @@ function showBook(resched) {
   `;
   $('#app').onclick = null;
   renderDays();
-  if (!S.resched) renderWho(!(me.name && me.phone));
+  if (!S.resched) renderWho(S.forOther || !(me.name && me.phone));
   if ($('#mem')) $('#mem').onclick = () => showMember();
   $('#sugs').addEventListener('click', e => {
     const b = e.target.closest('[data-t]'); if (!b) return;
@@ -394,7 +423,7 @@ function showBook(resched) {
 
 // ชื่อ/เบอร์: พิมพ์ครั้งแรกครั้งเดียว ครั้งต่อไปแสดงเป็นบรรทัดเดียว
 function renderWho(edit) {
-  const me = store.get('k10_me', {}), box = $('#who');
+  const me = S.forOther ? {} : store.get('k10_me', {}), box = $('#who');
   box.innerHTML = edit ? `
     <div class="field"><i class="ti ti-user"></i><input id="nm" placeholder="ชื่อ" maxlength="40" value="${esc(me.name || '')}" autocomplete="name"></div>
     <div class="err" id="enm"></div>
@@ -450,6 +479,14 @@ function renderWheel(want) {
     }, 120);
   };
   wh.onclick = e => { const b = e.target.closest('[data-w]'); if (b) spinTo(b.dataset.w, true); };
+  wh.onwheel = e => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.preventDefault(); wh.scrollLeft += e.deltaY; } };
+  wh.tabIndex = 0;
+  wh.onkeydown = e => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    const i = Math.round(wh.scrollLeft / itemW()) + (e.key === 'ArrowRight' ? 1 : -1), b = wh.children[i];
+    if (b) spinTo(b.dataset.w, true);
+  };
   spinTo(start, false);
   S.time = start; S.pick = null; evaluate();
 }
@@ -497,6 +534,11 @@ function evaluate() {
       }
     }
   }
+  const anyFree = d.days.some(x => !x.closed && x.free.length);
+  if (!anyFree) {
+    cls = 'warn'; sugs = [];
+    msg = `คิวเต็มทุกวันที่เปิดจองแล้ว${d.phone ? ` · <a href="tel:${esc(d.phone)}" class="au" style="text-decoration:underline"><i class="ti ti-phone"></i> โทรหาร้าน</a>` : ''}`;
+  }
   const msgEl = $('#msg');
   msgEl.className = 'msg ' + cls;
   msgEl.innerHTML = msg;
@@ -507,6 +549,7 @@ function evaluate() {
   $('#sugs').style.display = sugs.length ? '' : 'none';
   const ok = S.pick && free.indexOf(S.pick) >= 0;
   $('#go').textContent = ok ? (S.resched ? 'เลื่อนเป็น ' : 'จองเวลา ') + S.pick : (S.resched ? 'เลื่อนคิว' : 'จองคิว');
+  $('#go').style.display = anyFree ? '' : 'none';
   $('#ego').textContent = '';
 }
 
@@ -521,7 +564,7 @@ async function submit() {
       if (!name) { $('#enm').textContent = 'ใส่ชื่อก่อน'; bad = true; }
       if (!/^0\d{8,9}$/.test(phone)) { $('#eph').textContent = 'ใส่เบอร์โทร 10 หลัก'; bad = true; }
       if (bad) return;
-      store.set('k10_me', { name, phone });
+      if (!S.forOther) store.set('k10_me', { name, phone });
     } else {
       const me = store.get('k10_me', {});
       name = me.name; phone = me.phone;
@@ -544,8 +587,10 @@ async function submit() {
     store.set('k10_tickets', toks);
     S.time = ''; S.pick = null;
     await load();
+    const wasOther = S.forOther;
+    S.forOther = false;
     showTickets(res.booking.token);
-    toast(S.resched ? 'เลื่อนคิวแล้ว' : 'จองแล้ว');
+    toast(S.resched ? 'เลื่อนคิวแล้ว' : wasOther ? 'จองให้แล้ว' : 'จองแล้ว');
     return;
   }
   if (res.code === 'TAKEN') {
@@ -555,7 +600,7 @@ async function submit() {
     $('#refbox').open = true; $('#erf').textContent = res.msg;
   } else if (res.code === 'PHONE' || res.code === 'DUP' || res.code === 'NAME') {
     if (!$('#nm')) renderWho(true);
-    const msg = res.code === 'DUP' ? 'เบอร์นี้มีคิวอยู่แล้ว · ดูหรือเลื่อนได้จากตั๋วเดิม' : res.msg;
+    const msg = res.code === 'DUP' ? `เบอร์นี้จองไว้แล้ว ${res.date ? dShort(res.date) + ' ' + res.time : ''} · เลื่อนหรือยกเลิกได้จากลิงก์ตั๋วเดิม${S.d.phone ? ' หรือโทรหาร้าน' : ''}` : res.msg;
     $(res.code === 'NAME' ? '#enm' : '#eph').textContent = msg;
   } else {
     $('#ego').textContent = res.msg;
@@ -571,10 +616,10 @@ function calUrl(t) {
 }
 
 function showTickets(focus) {
-  S.mode = 'ticket'; S.resched = null;
+  S.mode = 'ticket'; S.resched = null; S.forOther = false;
   const d = S.d;
   if (!d.tickets.length) return showBook();
-  $('#app').innerHTML = d.tickets.map(t => `
+  $('#app').innerHTML = noticeHtml() + d.tickets.map(t => `
     <div class="card" style="margin-bottom:16px${focus && focus !== t.token ? ';opacity:.75' : ''}">
       <div class="tk-top">
         <i class="ti ti-scissors au" style="font-size:20px"></i>
@@ -598,7 +643,7 @@ function showTickets(focus) {
   $('#app').onclick = async e => {
     const b = e.target.closest('[data-a]'); if (!b) return;
     const t = d.tickets.find(x => x.token === b.dataset.k);
-    if (b.dataset.a === 'new') { store.del('k10_me'); return showBook(); }
+    if (b.dataset.a === 'new') return showBook(null, true);
     if (b.dataset.a === 'mem') return showMember();
     if (b.dataset.a === 'link') return copyText(d.url + '?t=' + t.token);
     if (b.dataset.a === 'move') {
@@ -611,6 +656,7 @@ function showTickets(focus) {
       askConfirm(`ยกเลิกคิว ${dShort(t.date)} ${t.time}?`, 'ยกเลิกคิว', async () => {
         try {
           await call('cancelBooking', t.token);
+          store.set('k10_tickets', store.get('k10_tickets', []).filter(x => x !== t.token));   // ยกเลิกเอง ไม่ต้องแจ้งว่าร้านยกเลิก
           await load();
           toast('ยกเลิกแล้ว');
           S.d.tickets.length ? showTickets() : showBook();
