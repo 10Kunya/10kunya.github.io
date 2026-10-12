@@ -20,10 +20,12 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.55}
+html{touch-action:manipulation;-webkit-text-size-adjust:100%}
+body.lock{overflow:hidden}
 button,input,select{font:inherit;color:inherit}
 button{background:none;border:0;padding:0;cursor:pointer}
 a{color:inherit;text-decoration:none}
-.wrap{max-width:440px;margin:0 auto;padding:22px 20px calc(96px + env(safe-area-inset-bottom))}
+.wrap{max-width:440px;margin:0 auto;padding:calc(22px + env(safe-area-inset-top)) 20px calc(96px + env(safe-area-inset-bottom))}
 .sv{font-family:var(--serif);font-variant-numeric:lining-nums tabular-nums;font-weight:500}
 .mu{color:var(--mute);font-size:13px}
 .au{color:var(--gold)}
@@ -62,8 +64,12 @@ a{color:inherit;text-decoration:none}
 .nav button{font-size:23px;color:var(--dim);padding:6px 16px}
 .nav button.on{color:var(--gold)}
 
-.shade{position:fixed;inset:0;background:rgba(8,7,6,.7);display:flex;align-items:flex-end;justify-content:center;z-index:20;animation:fade .15s}
-.sheet{background:var(--card);border:1px solid var(--line2);border-bottom:0;border-radius:20px 20px 0 0;width:100%;max-width:440px;padding:22px 20px calc(22px + env(safe-area-inset-bottom));max-height:88vh;overflow:auto;animation:up .2s ease-out}
+.shade{position:fixed;left:0;right:0;top:0;height:var(--vvh,100%);background:rgba(8,7,6,.7);display:flex;align-items:flex-end;justify-content:center;z-index:20;animation:fade .15s}
+.shade.under{display:none}
+.sheet{position:relative;background:var(--card);border:1px solid var(--line2);border-bottom:0;border-radius:20px 20px 0 0;width:100%;max-width:440px;padding:26px 20px calc(22px + env(safe-area-inset-bottom));max-height:88%;overflow:auto;overscroll-behavior:contain;animation:up .2s ease-out}
+.grab{position:absolute;top:8px;left:50%;width:40px;height:4px;margin-left:-20px;border-radius:2px;background:var(--line2)}
+.sx{position:absolute;top:12px;right:12px;width:36px;height:36px;border-radius:50%;color:var(--mute);font-size:20px;display:flex;align-items:center;justify-content:center;z-index:1}
+.sheet h3{padding-right:36px}
 .sheet h3{margin:0 0 14px;font-weight:500;font-size:20px}
 .act{display:flex;align-items:center;gap:14px;width:100%;padding:14px 2px;border-bottom:1px solid var(--line);text-align:left;font-size:16px}
 .act i{font-size:20px;color:var(--mute);width:22px}
@@ -155,27 +161,98 @@ function toast(msg) {
   toastT = setTimeout(() => el.remove(), 2400);
 }
 
-function openSheet(html, onClick) {
-  closeSheet();
+/*** ---------- หน้าต่างเด้งจากล่าง ---------- ***/
+// ปิดได้ 4 ทาง: ปุ่ม ✕ · แตะพื้นหลัง · ปัดลง · ปุ่มย้อนกลับของมือถือ
+function makeShade(html, onClick) {
   const sh = document.createElement('div');
   sh.className = 'shade';
-  sh.innerHTML = '<div class="sheet">' + html + '</div>';
+  sh.innerHTML = '<div class="sheet"><div class="grab"></div><button class="sx" data-close aria-label="ปิด"><i class="ti ti-x"></i></button><div class="sbody">' + html + '</div></div>';
   sh.addEventListener('click', e => {
-    if (e.target === sh) return closeSheet();
+    if (e.target === sh || e.target.closest('[data-close]')) return popSheet();
     const b = e.target.closest('[data-a]');
     if (b && onClick) onClick(b.dataset.a, b, sh);
   });
-  document.body.appendChild(sh);
+  swipeToClose($('.sheet', sh));
   return sh;
 }
-function closeSheet() { const s = $('.shade'); if (s) s.remove(); }
-
-function askConfirm(title, okText, cb, noText) {
-  openSheet('<h3>' + esc(title) + '</h3>' +
-    '<button class="btn" data-a="yes" style="margin-top:6px">' + esc(okText) + '</button>' +
-    '<button class="link" data-a="no">' + esc(noText || 'ไม่ใช่') + '</button>',
-    a => { closeSheet(); if (a === 'yes') cb(); });
+function openSheet(html, onClick, stack) {
+  if (stack) { const prev = $('.shade:not(.under)'); if (prev) prev.classList.add('under'); } else closeSheet();
+  const sh = makeShade(html, onClick);
+  document.body.appendChild(sh);
+  document.body.classList.add('lock');
+  return sh;
 }
+// หน้าต่างย่อยที่ซ้อนบนหน้าต่างเดิม — กดกลับ/ปิดแล้วกลับไปหน้าต่างเดิม
+const stackSheet = (html, onClick) => openSheet(html, onClick, true);
+// ปิดทุกหน้าต่าง (ใช้หลังทำรายการเสร็จ)
+function closeSheet() {
+  document.querySelectorAll('.shade').forEach(s => s.remove());
+  document.body.classList.remove('lock');
+}
+// ปิดเฉพาะหน้าต่างบนสุด — ถ้าข้างใต้มีหน้าต่างเดิม (เช่นกล่องยืนยัน) ให้กลับไปที่หน้าต่างนั้น
+function popSheet() {
+  const all = document.querySelectorAll('.shade');
+  if (!all.length) return false;
+  all[all.length - 1].remove();
+  const prev = all[all.length - 2];
+  if (prev) prev.classList.remove('under'); else document.body.classList.remove('lock');
+  return true;
+}
+// กล่องยืนยัน: ซ้อนบนหน้าต่างเดิม กด "ไม่" แล้วกลับไปหน้าต่างเดิม
+function askConfirm(title, okText, cb, noText) {
+  const prev = $('.shade:not(.under)');
+  if (prev) prev.classList.add('under');
+  const sh = makeShade('<h3>' + esc(title) + '</h3>' +
+    '<button class="btn" data-a="yes" style="margin-top:6px">' + esc(okText) + '</button>' +
+    '<button class="link" data-a="no">' + esc(noText || 'กลับ') + '</button>',
+    a => { if (a === 'yes') { closeSheet(); cb(); } else popSheet(); });
+  document.body.appendChild(sh);
+  document.body.classList.add('lock');
+}
+// ปัดหน้าต่างลงเพื่อปิด (ทำงานเมื่อเลื่อนเนื้อหาขึ้นไปบนสุดแล้ว)
+function swipeToClose(sheet) {
+  let y0 = 0, dy = 0, on = false;
+  sheet.addEventListener('touchstart', e => { on = sheet.scrollTop <= 0; y0 = e.touches[0].clientY; dy = 0; }, { passive: true });
+  sheet.addEventListener('touchmove', e => {
+    if (!on) return;
+    dy = e.touches[0].clientY - y0;
+    if (dy > 0) { e.preventDefault(); sheet.style.transform = `translateY(${dy}px)`; sheet.style.transition = 'none'; }
+  }, { passive: false });
+  sheet.addEventListener('touchend', () => {
+    if (!on) return;
+    sheet.style.transition = 'transform .18s'; sheet.style.transform = '';
+    if (dy > 90) popSheet();
+    on = false;
+  });
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('.shade')) popSheet(); });
+
+// ให้หน้าต่างอยู่เหนือคีย์บอร์ด (iPhone ไม่ย่อหน้าจอให้เอง)
+if (window.visualViewport) {
+  const fit = () => document.documentElement.style.setProperty('--vvh', visualViewport.height + 'px');
+  visualViewport.addEventListener('resize', fit);
+  fit();
+}
+
+/*** ---------- ปุ่มย้อนกลับของมือถือ (Android ปุ่มกลับ · iPhone ปัดขอบจอ) ---------- ***/
+// หน้าเว็บกำหนด window.appBack = { need: () => มีอะไรให้ถอยไหม, handle: () => ถอย 1 ขั้น }
+// วิธีทำงาน: ขณะที่มีอะไรให้ถอย จะมีประวัติหน้าเว็บสำรองไว้ 1 ชั้น กดกลับแล้วถอยในแอปแทนการออกจากเว็บ
+const HB = { armed: false, skip: false, t: 0 };
+function backSync() {
+  clearTimeout(HB.t);
+  HB.t = setTimeout(() => {
+    const need = !!(window.appBack && appBack.need());
+    if (need && !HB.armed) { history.pushState({ k10: 1 }, ''); HB.armed = true; }
+    else if (!need && HB.armed) { HB.skip = true; HB.armed = false; history.back(); }
+  }, 80);
+}
+window.addEventListener('popstate', () => {
+  if (HB.skip) { HB.skip = false; return backSync(); }
+  HB.armed = false;
+  if (window.appBack) appBack.handle();
+  backSync();
+});
+new MutationObserver(backSync).observe(document.body, { childList: true, subtree: true });
 
 /*** ---------- บัตรสมาชิก (ใช้ทั้งหน้าลูกค้าและหน้าช่าง) ---------- ***/
 const TIER_C = ['#B98260', '#C8C9CC', '#C9A66B', '#A9C3D9', '#C9B3DD'];
@@ -480,7 +557,7 @@ function calUrl(t) {
 }
 
 function showTickets(focus) {
-  S.mode = 'ticket';
+  S.mode = 'ticket'; S.resched = null;
   const d = S.d;
   if (!d.tickets.length) return showBook();
   $('#app').innerHTML = d.tickets.map(t => `
@@ -577,6 +654,18 @@ function showMember() {
   $('#mback').onclick = () => back();
   if ($('#mp').value) go();
 }
+
+/*** ---------- ปุ่มย้อนกลับของมือถือ ---------- ***/
+// หน้าต่าง → บัตรสมาชิก → หน้าจอง (ถ้ามีตั๋วอยู่ กลับไปหน้าตั๋ว)
+window.appBack = {
+  need: () => !!$('.shade') || S.mode === 'member' || (S.mode === 'book' && !!S.d && (!!S.resched || S.d.tickets.length > 0)),
+  handle: () => {
+    if ($('.shade')) return popSheet();
+    if (S.mode === 'member') return S.d.tickets.length ? showTickets() : showBook();
+    if (S.mode === 'book' && S.resched) return load().then(ok => ok && showTickets());
+    if (S.mode === 'book' && S.d.tickets.length) return showTickets();
+  }
+};
 
 start();
 </script>

@@ -27,10 +27,12 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.55}
+html{touch-action:manipulation;-webkit-text-size-adjust:100%}
+body.lock{overflow:hidden}
 button,input,select{font:inherit;color:inherit}
 button{background:none;border:0;padding:0;cursor:pointer}
 a{color:inherit;text-decoration:none}
-.wrap{max-width:440px;margin:0 auto;padding:22px 20px calc(96px + env(safe-area-inset-bottom))}
+.wrap{max-width:440px;margin:0 auto;padding:calc(22px + env(safe-area-inset-top)) 20px calc(96px + env(safe-area-inset-bottom))}
 .sv{font-family:var(--serif);font-variant-numeric:lining-nums tabular-nums;font-weight:500}
 .mu{color:var(--mute);font-size:13px}
 .au{color:var(--gold)}
@@ -69,8 +71,12 @@ a{color:inherit;text-decoration:none}
 .nav button{font-size:23px;color:var(--dim);padding:6px 16px}
 .nav button.on{color:var(--gold)}
 
-.shade{position:fixed;inset:0;background:rgba(8,7,6,.7);display:flex;align-items:flex-end;justify-content:center;z-index:20;animation:fade .15s}
-.sheet{background:var(--card);border:1px solid var(--line2);border-bottom:0;border-radius:20px 20px 0 0;width:100%;max-width:440px;padding:22px 20px calc(22px + env(safe-area-inset-bottom));max-height:88vh;overflow:auto;animation:up .2s ease-out}
+.shade{position:fixed;left:0;right:0;top:0;height:var(--vvh,100%);background:rgba(8,7,6,.7);display:flex;align-items:flex-end;justify-content:center;z-index:20;animation:fade .15s}
+.shade.under{display:none}
+.sheet{position:relative;background:var(--card);border:1px solid var(--line2);border-bottom:0;border-radius:20px 20px 0 0;width:100%;max-width:440px;padding:26px 20px calc(22px + env(safe-area-inset-bottom));max-height:88%;overflow:auto;overscroll-behavior:contain;animation:up .2s ease-out}
+.grab{position:absolute;top:8px;left:50%;width:40px;height:4px;margin-left:-20px;border-radius:2px;background:var(--line2)}
+.sx{position:absolute;top:12px;right:12px;width:36px;height:36px;border-radius:50%;color:var(--mute);font-size:20px;display:flex;align-items:center;justify-content:center;z-index:1}
+.sheet h3{padding-right:36px}
 .sheet h3{margin:0 0 14px;font-weight:500;font-size:20px}
 .act{display:flex;align-items:center;gap:14px;width:100%;padding:14px 2px;border-bottom:1px solid var(--line);text-align:left;font-size:16px}
 .act i{font-size:20px;color:var(--mute);width:22px}
@@ -95,7 +101,7 @@ a{color:inherit;text-decoration:none}
 </style>
 
 <style>
-#app.fit{height:calc(100dvh - 62px - env(safe-area-inset-bottom));display:flex;flex-direction:column;padding-top:14px;padding-bottom:10px}
+#app.fit{height:calc(100dvh - 62px - env(safe-area-inset-bottom));display:flex;flex-direction:column;padding-top:calc(14px + env(safe-area-inset-top));padding-bottom:10px}
 .nowb{display:flex;align-items:stretch;gap:12px;padding:12px 14px;margin-bottom:10px;flex-shrink:0}
 .nstat{border-left:1px solid var(--line2);padding-left:14px;display:flex;flex-direction:column;justify-content:space-around;font-size:21px;color:var(--mute);min-width:70px;font-variant-numeric:lining-nums}
 .grid{flex:1;min-height:0;display:grid;grid-auto-flow:column;grid-template-columns:1fr 1fr;gap:5px;touch-action:none}
@@ -123,7 +129,7 @@ a{color:inherit;text-decoration:none}
   background:var(--gold);color:var(--bg);border-radius:14px;padding:12px 16px;font-size:16px;line-height:1.4;max-width:420px;margin:0 auto;animation:up .2s ease-out}
 .newbk > .ti:first-child{font-size:26px}
 .dnav{display:flex;align-items:center;gap:4px}
-.dnav button{color:var(--mute);font-size:20px;padding:4px 6px}
+.dnav button{color:var(--mute);font-size:20px;padding:8px 8px;min-height:40px}
 details.fold > summary{padding:12px 0;cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px}
 details.fold > summary::-webkit-details-marker{display:none}
 details.fold[open] > summary .ti-chevron-down{transform:rotate(180deg)}
@@ -144,7 +150,7 @@ details.fold[open] > summary .ti-chevron-down{transform:rotate(180deg)}
 .pad .ok{color:var(--gold);border-color:var(--gold-line);font-size:24px}
 .pad .del{border:0;color:var(--mute);font-size:24px}
 .stp{display:inline-flex;align-items:center;gap:2px}
-.stp button{width:26px;height:26px;border:1px solid var(--line2);border-radius:50%;color:var(--mute);font-size:14px}
+.stp button{width:34px;height:34px;border:1px solid var(--line2);border-radius:50%;color:var(--mute);font-size:16px}
 .stp b{font-family:var(--serif);font-variant-numeric:lining-nums;font-weight:500;font-size:17px;color:var(--gold);min-width:30px;text-align:center}
 .set .row{gap:12px}
 .set .row > i{color:var(--mute);font-size:19px}
@@ -155,16 +161,17 @@ details.fold[open] > summary .ti-chevron-down{transform:rotate(180deg)}
 .step{display:flex;align-items:center;gap:14px}
 .step button{width:32px;height:32px;border:1px solid var(--line2);border-radius:50%;color:var(--mute)}
 .hol{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line2);border-radius:20px;padding:4px 8px 4px 12px;margin:0 6px 6px 0;font-size:13px}
-.hol button{color:var(--mute);font-size:15px}
+.hol button{color:var(--mute);font-size:16px;padding:4px 6px}
 .ed{display:flex;align-items:center;gap:8px;border:1px solid var(--line2);border-radius:12px;padding:8px 10px;margin-bottom:8px}
-.ed input{background:transparent;border:0;border-bottom:1px solid var(--line2);outline:0;padding:4px 2px;min-width:0;font-size:15px}
+.ed input{background:transparent;border:0;border-bottom:1px solid var(--line2);outline:0;padding:4px 2px;min-width:0;font-size:16px}
 .ed input.n{width:44px;text-align:center;font-family:var(--serif);font-variant-numeric:lining-nums;font-size:17px;color:var(--gold)}
-.ed .x{color:var(--mute);font-size:17px;padding:4px}
+.ed .x{color:var(--mute);font-size:18px;padding:8px}
 .menu-it{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:13px 0;border-bottom:1px solid var(--line);font-size:16px}
 .mic{width:40px;height:40px;border-radius:12px;background:var(--gold-bg);border:1px solid var(--gold-line);display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:20px;flex-shrink:0}
 .sw{width:46px;height:26px;border-radius:13px;background:var(--line2);position:relative;flex-shrink:0;transition:background .15s}
 .sw::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--mute);transition:left .15s}
 .sw.on{background:var(--gold)}
+.sw::before{content:'';position:absolute;inset:-10px -6px}
 .sw.on::after{left:23px;background:var(--bg)}
 .pcard{padding:12px 14px;margin-bottom:10px;border-color:var(--line2)}
 .pcard.off > .prow:first-child > *:not(.sw){opacity:.45}
@@ -233,27 +240,98 @@ function toast(msg) {
   toastT = setTimeout(() => el.remove(), 2400);
 }
 
-function openSheet(html, onClick) {
-  closeSheet();
+/*** ---------- หน้าต่างเด้งจากล่าง ---------- ***/
+// ปิดได้ 4 ทาง: ปุ่ม ✕ · แตะพื้นหลัง · ปัดลง · ปุ่มย้อนกลับของมือถือ
+function makeShade(html, onClick) {
   const sh = document.createElement('div');
   sh.className = 'shade';
-  sh.innerHTML = '<div class="sheet">' + html + '</div>';
+  sh.innerHTML = '<div class="sheet"><div class="grab"></div><button class="sx" data-close aria-label="ปิด"><i class="ti ti-x"></i></button><div class="sbody">' + html + '</div></div>';
   sh.addEventListener('click', e => {
-    if (e.target === sh) return closeSheet();
+    if (e.target === sh || e.target.closest('[data-close]')) return popSheet();
     const b = e.target.closest('[data-a]');
     if (b && onClick) onClick(b.dataset.a, b, sh);
   });
-  document.body.appendChild(sh);
+  swipeToClose($('.sheet', sh));
   return sh;
 }
-function closeSheet() { const s = $('.shade'); if (s) s.remove(); }
-
-function askConfirm(title, okText, cb, noText) {
-  openSheet('<h3>' + esc(title) + '</h3>' +
-    '<button class="btn" data-a="yes" style="margin-top:6px">' + esc(okText) + '</button>' +
-    '<button class="link" data-a="no">' + esc(noText || 'ไม่ใช่') + '</button>',
-    a => { closeSheet(); if (a === 'yes') cb(); });
+function openSheet(html, onClick, stack) {
+  if (stack) { const prev = $('.shade:not(.under)'); if (prev) prev.classList.add('under'); } else closeSheet();
+  const sh = makeShade(html, onClick);
+  document.body.appendChild(sh);
+  document.body.classList.add('lock');
+  return sh;
 }
+// หน้าต่างย่อยที่ซ้อนบนหน้าต่างเดิม — กดกลับ/ปิดแล้วกลับไปหน้าต่างเดิม
+const stackSheet = (html, onClick) => openSheet(html, onClick, true);
+// ปิดทุกหน้าต่าง (ใช้หลังทำรายการเสร็จ)
+function closeSheet() {
+  document.querySelectorAll('.shade').forEach(s => s.remove());
+  document.body.classList.remove('lock');
+}
+// ปิดเฉพาะหน้าต่างบนสุด — ถ้าข้างใต้มีหน้าต่างเดิม (เช่นกล่องยืนยัน) ให้กลับไปที่หน้าต่างนั้น
+function popSheet() {
+  const all = document.querySelectorAll('.shade');
+  if (!all.length) return false;
+  all[all.length - 1].remove();
+  const prev = all[all.length - 2];
+  if (prev) prev.classList.remove('under'); else document.body.classList.remove('lock');
+  return true;
+}
+// กล่องยืนยัน: ซ้อนบนหน้าต่างเดิม กด "ไม่" แล้วกลับไปหน้าต่างเดิม
+function askConfirm(title, okText, cb, noText) {
+  const prev = $('.shade:not(.under)');
+  if (prev) prev.classList.add('under');
+  const sh = makeShade('<h3>' + esc(title) + '</h3>' +
+    '<button class="btn" data-a="yes" style="margin-top:6px">' + esc(okText) + '</button>' +
+    '<button class="link" data-a="no">' + esc(noText || 'กลับ') + '</button>',
+    a => { if (a === 'yes') { closeSheet(); cb(); } else popSheet(); });
+  document.body.appendChild(sh);
+  document.body.classList.add('lock');
+}
+// ปัดหน้าต่างลงเพื่อปิด (ทำงานเมื่อเลื่อนเนื้อหาขึ้นไปบนสุดแล้ว)
+function swipeToClose(sheet) {
+  let y0 = 0, dy = 0, on = false;
+  sheet.addEventListener('touchstart', e => { on = sheet.scrollTop <= 0; y0 = e.touches[0].clientY; dy = 0; }, { passive: true });
+  sheet.addEventListener('touchmove', e => {
+    if (!on) return;
+    dy = e.touches[0].clientY - y0;
+    if (dy > 0) { e.preventDefault(); sheet.style.transform = `translateY(${dy}px)`; sheet.style.transition = 'none'; }
+  }, { passive: false });
+  sheet.addEventListener('touchend', () => {
+    if (!on) return;
+    sheet.style.transition = 'transform .18s'; sheet.style.transform = '';
+    if (dy > 90) popSheet();
+    on = false;
+  });
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('.shade')) popSheet(); });
+
+// ให้หน้าต่างอยู่เหนือคีย์บอร์ด (iPhone ไม่ย่อหน้าจอให้เอง)
+if (window.visualViewport) {
+  const fit = () => document.documentElement.style.setProperty('--vvh', visualViewport.height + 'px');
+  visualViewport.addEventListener('resize', fit);
+  fit();
+}
+
+/*** ---------- ปุ่มย้อนกลับของมือถือ (Android ปุ่มกลับ · iPhone ปัดขอบจอ) ---------- ***/
+// หน้าเว็บกำหนด window.appBack = { need: () => มีอะไรให้ถอยไหม, handle: () => ถอย 1 ขั้น }
+// วิธีทำงาน: ขณะที่มีอะไรให้ถอย จะมีประวัติหน้าเว็บสำรองไว้ 1 ชั้น กดกลับแล้วถอยในแอปแทนการออกจากเว็บ
+const HB = { armed: false, skip: false, t: 0 };
+function backSync() {
+  clearTimeout(HB.t);
+  HB.t = setTimeout(() => {
+    const need = !!(window.appBack && appBack.need());
+    if (need && !HB.armed) { history.pushState({ k10: 1 }, ''); HB.armed = true; }
+    else if (!need && HB.armed) { HB.skip = true; HB.armed = false; history.back(); }
+  }, 80);
+}
+window.addEventListener('popstate', () => {
+  if (HB.skip) { HB.skip = false; return backSync(); }
+  HB.armed = false;
+  if (window.appBack) appBack.handle();
+  backSync();
+});
+new MutationObserver(backSync).observe(document.body, { childList: true, subtree: true });
 
 /*** ---------- บัตรสมาชิก (ใช้ทั้งหน้าลูกค้าและหน้าช่าง) ---------- ***/
 const TIER_C = ['#B98260', '#C8C9CC', '#C9A66B', '#A9C3D9', '#C9B3DD'];
@@ -646,13 +724,20 @@ function dayChips(sel) {
 }
 async function dayData(date) { return date === B.d.date ? B.d : api('barberDay', date).catch(() => null); }
 
+// ซ้อนบนเมนูคิว (กดกลับแล้วกลับไปเมนูคิวเดิม) · เปลี่ยนวันแล้ววาดใหม่ในหน้าต่างเดิม
 async function moveSheet(r, date) {
-  const day = await dayData(date);
-  if (!day) return;
-  openSheet(`<h3>เลื่อน ${esc(r.name)}</h3>${dayChips(day.date)}${slotChips(freeAhead(day), '')}`, (a, b) => {
-    if (a === 'day') return moveSheet(r, b.dataset.d);
-    if (a === 'pick') act({ action: 'move', id: r.id, date: day.date, time: b.dataset.t }, 'เลื่อนเป็น ' + b.dataset.t);
-  });
+  let cur = date, sh = null;
+  const draw = async () => {
+    const day = await dayData(cur);
+    if (!day) return;
+    const html = `<h3>เลื่อน ${esc(r.name)}</h3>${dayChips(day.date)}${slotChips(freeAhead(day), '')}`;
+    if (sh) { $('.sbody', sh).innerHTML = html; return; }
+    sh = stackSheet(html, (a, b) => {
+      if (a === 'day') { cur = b.dataset.d; return draw(); }
+      if (a === 'pick') act({ action: 'move', id: r.id, date: cur, time: b.dataset.t }, 'เลื่อนเป็น ' + b.dataset.t);
+    });
+  };
+  draw();
 }
 
 async function addSheet(time, date) {
@@ -679,7 +764,7 @@ async function addSheet(time, date) {
     <button class="btn" data-a="walkin" style="margin-top:16px">${st.pick ? `เพิ่ม ${esc(st.who ? st.who.name || st.who.phone : 'walk-in')} · ${st.pick}` : 'เพิ่มคิว'}</button>
     <button class="btn line" data-a="block" style="margin-top:10px"><i class="ti ti-lock"></i> ปิดช่วงนี้ ไม่รับคิว</button>`;
   const draw = () => {
-    $('.sheet', sh).innerHTML = html();
+    $('.sbody', sh).innerHTML = html();
     if (!st.find) return;
     $('#an', sh).oninput = e => { st.nn = e.target.value; };
     $('#ap', sh).oninput = e => { st.np = e.target.value; };
@@ -788,6 +873,14 @@ async function showSettings(page) {
   B.set = clone(B.setSaved);
   renderSettings();
 }
+function leaveSetPage() {
+  const go = () => { B.setPage = ''; B.set = clone(B.setSaved); renderSettings(); window.scrollTo(0, 0); };
+  if (EDIT_PAGES.indexOf(B.setPage) >= 0) {
+    readSettings();
+    if (JSON.stringify(B.set) !== JSON.stringify(B.setSaved)) return askConfirm('ยังไม่ได้บันทึก · ออกโดยไม่บันทึก?', 'ออก ไม่บันทึก', go, 'อยู่ต่อ');
+  }
+  go();
+}
 function openSetPage(page) { B.setPage = page; B.set = clone(B.setSaved); renderSettings(); window.scrollTo(0, 0); }
 
 function renderSettings() {
@@ -804,7 +897,7 @@ function renderSettings() {
   }
   const [icon, title] = SET_PAGES[pg];
   $('#app').innerHTML = `<div class="set">
-    <div class="head" style="justify-content:flex-start;gap:6px"><button data-a="back" class="au" style="font-size:24px;padding:2px 6px 2px 0" aria-label="กลับ"><i class="ti ti-chevron-left"></i></button>
+    <div class="head" style="justify-content:flex-start;gap:6px"><button data-a="back" class="au" style="font-size:24px;padding:8px 12px 8px 0;min-width:44px;min-height:44px" aria-label="กลับ"><i class="ti ti-chevron-left"></i></button>
       <span class="sv brand"><i class="ti ${icon} au" style="font-size:19px"></i> ${title}</span></div>
     ${PAGE_BODY[pg](s)}
     ${EDIT_PAGES.indexOf(pg) >= 0 ? '<div class="err" id="serr" style="margin-top:12px"></div><button class="btn" data-a="save" style="margin-top:20px">บันทึก</button>' : ''}
@@ -836,7 +929,7 @@ const PAGE_BODY = {
     </div>
     <div class="mu" style="padding:18px 0 8px"><i class="ti ti-beach"></i> หยุดพิเศษ</div>
     <div>${s.holidays.map(h => `<span class="hol">${dShort(h)}<button data-a="hdel" data-h="${h}" aria-label="ลบ"><i class="ti ti-x"></i></button></span>`).join('')}</div>
-    <div class="row" style="border:0;padding-top:4px"><i class="ti ti-plus mu"></i><input type="date" id="sh" min="${new Date().toISOString().slice(0, 10)}" style="flex:1;text-align:left;font-family:var(--sans);font-size:15px;color:var(--text)"></div>
+    <div class="row" style="border:0;padding-top:4px"><i class="ti ti-plus mu"></i><input type="date" id="sh" min="${new Date().toISOString().slice(0, 10)}" style="flex:1;text-align:left;font-family:var(--sans);font-size:16px;color:var(--text)"></div>
     <div class="mu" style="padding:14px 0 0"><i class="ti ti-ticket"></i> แสดงบนตั๋วลูกค้า</div>
     <div class="field"><i class="ti ti-phone"></i><input id="sp" placeholder="เบอร์ร้าน" inputmode="tel" value="${esc(s.phone)}"></div>
     <div class="field"><i class="ti ti-map-pin"></i><input id="sm" placeholder="ลิงก์ Google Maps ของร้าน" value="${esc(s.mapUrl)}"></div>`;
@@ -854,7 +947,7 @@ const PAGE_BODY = {
     <button class="mu" data-a="tadd" style="font-size:14px;padding:4px 0 8px"><i class="ti ti-plus"></i> เพิ่มระดับ</button>
     <div class="mu" style="padding:14px 0 8px"><i class="ti ti-gift"></i> รางวัล</div>
     ${s.rewards.map((r, i) => `<div class="ed reward">
-      <button data-a="icon" data-i="${i}" class="au" style="font-size:19px;padding:2px 4px" aria-label="เปลี่ยนไอคอน"><i class="ti ti-${esc(r.icon)}"></i></button><input type="hidden" data-f="icon" value="${esc(r.icon)}">
+      <button data-a="icon" data-i="${i}" class="au" style="font-size:19px;padding:10px 8px" aria-label="เปลี่ยนไอคอน"><i class="ti ti-${esc(r.icon)}"></i></button><input type="hidden" data-f="icon" value="${esc(r.icon)}">
       <input data-f="name" value="${esc(r.name)}" maxlength="30" style="flex:1" placeholder="ชื่อรางวัล">
       ${stepper('rewards', i, 'cost', r.cost)}<input type="hidden" data-f="cost" value="${r.cost}">
       <button class="x" data-a="rdel" data-i="${i}" aria-label="ลบ"><i class="ti ti-x"></i></button>
@@ -894,7 +987,7 @@ const PAGE_BODY = {
     ${[['user', 'ลูกค้า', CUSTOMER_URL], ['scissors', 'ช่าง', SITE_BASE]].map(([ic, l, u]) => `<div class="row" style="align-items:flex-start">
       <i class="ti ti-${ic} au" style="font-size:19px;margin-top:2px"></i>
       <span style="flex:1;min-width:0">${l}<span class="mu" style="display:block;word-break:break-all">${u}</span></span>
-      <button class="au" data-a="copy" data-u="${u}" aria-label="คัดลอก" style="font-size:20px;padding:4px"><i class="ti ti-copy"></i></button></div>`).join('')}`,
+      <button class="au" data-a="copy" data-u="${u}" aria-label="คัดลอก" style="font-size:20px;padding:10px"><i class="ti ti-copy"></i></button></div>`).join('')}`,
   push: () => '<div id="pushbox"><div class="mu">กำลังตรวจ…</div></div>',
   manual: () => `<div class="man">${MANUAL}</div>`,
   account: s => `
@@ -948,7 +1041,7 @@ function boostSheet(i) {
     b.from = $('#bf', sh).value; b.to = $('#bt', sh).value;
     if (a === 'd') { const n = +el.dataset.n, k = b.days.indexOf(n); k >= 0 ? b.days.splice(k, 1) : b.days.push(n); }
     if (a === 'm') b.mult = +el.dataset.n;
-    if (a === 'd' || a === 'm') { $('.sheet', sh).innerHTML = draw(); return; }
+    if (a === 'd' || a === 'm') { $('.sbody', sh).innerHTML = draw(); return; }
     if (a === 'del') { s.boosts.splice(i, 1); closeSheet(); return saveSet(); }
     if (a === 'ok') {
       if (!b.days.length) { $('#be', sh).textContent = 'เลือกอย่างน้อย 1 วัน'; return; }
@@ -964,7 +1057,7 @@ $('#app').addEventListener('click', async e => {
   const b = e.target.closest('[data-a]'); if (!b) return;
   const a = b.dataset.a, s = B.set;
   if (a === 'page') return openSetPage(b.dataset.p);
-  if (a === 'back') { B.setPage = ''; B.set = clone(B.setSaved); return renderSettings(); }
+  if (a === 'back') return leaveSetPage();
   readSettings();
   if (a === 'adv-' || a === 'adv+') { s.advanceDays = Math.max(0, Math.min(30, s.advanceDays + (a === 'adv+' ? 1 : -1))); return renderSettings(); }
   if (a === 'wd') { const n = +b.dataset.n, i = s.closedDays.indexOf(n); i >= 0 ? s.closedDays.splice(i, 1) : s.closedDays.push(n); return renderSettings(); }
@@ -1020,7 +1113,7 @@ async function showMembers(q) {
   B.view = 'mem'; navOn('mem');
   $('#app').innerHTML = `
     <div class="head"><span class="sv brand">สมาชิก</span>
-      <button class="mu" data-m="add" style="font-size:14px"><i class="ti ti-plus"></i> ลงแต้มลูกค้าเก่า</button></div>
+      <button class="mu" data-m="add" style="font-size:14px;padding:12px 0 12px 12px"><i class="ti ti-plus"></i> ลงแต้มลูกค้าเก่า</button></div>
     <div id="mst"></div>
     <div class="field"><i class="ti ti-search"></i><input id="mq" placeholder="เบอร์ (4 ตัวท้ายก็ได้) หรือชื่อ" value="${esc(q || '')}" autocomplete="off"></div>
     <div id="ml" style="margin-top:6px"><div class="load" style="padding:40px 0"><i class="ti ti-scissors"></i></div></div>`;
@@ -1128,19 +1221,19 @@ async function memberSheet(phone) {
 
 // กล่องพิมพ์ข้อความสั้น (ใช้เฉพาะที่ต้องพิมพ์จริง ๆ)
 function textSheet(title, ph, value, type, onSave) {
-  const sh = openSheet(`<h3>${esc(title)}</h3>
+  const sh = stackSheet(`<h3>${esc(title)}</h3>
     <div class="field"><i class="ti ti-${type === 'tel' ? 'phone' : 'user'}"></i><input id="tx" value="${esc(value || '')}" placeholder="${esc(ph)}" ${type === 'tel' ? 'inputmode="tel" maxlength="12"' : 'maxlength="40"'}></div>
     <button class="btn" data-a="ok" style="margin-top:16px">บันทึก</button>`, a => { if (a === 'ok') onSave($('#tx', sh).value.trim()); });
   setTimeout(() => $('#tx', sh).focus(), 50);
 }
 function monthSheet(cur, onPick) {
-  openSheet(`<h3>เดือนเกิด</h3><div class="chips" style="grid-template-columns:repeat(4,1fr)">
+  stackSheet(`<h3>เดือนเกิด</h3><div class="chips" style="grid-template-columns:repeat(4,1fr)">
     ${MONTHS.map((n, i) => `<button class="chip ${cur === i + 1 ? 'on' : ''}" data-a="m" data-v="${i + 1}">${n}</button>`).join('')}</div>
     <button class="link" data-a="m" data-v="0">ไม่ระบุ</button>`, (a, b) => { if (a === 'm') onPick(+b.dataset.v); });
 }
 // รวมบัญชี: เลือกบัญชีปลายทาง แล้วย้ายทุกอย่างของบัญชีนี้ไปรวม
 function mergeSheet(m) {
-  const sh = openSheet(`<h3>รวมบัญชี ${esc(m.name || m.phone)}</h3>
+  const sh = stackSheet(`<h3>รวมบัญชี ${esc(m.name || m.phone)}</h3>
     <div class="mu" style="margin-bottom:10px">ย้ายแต้ม ยอดสะสม และจำนวนครั้งของ ${esc(m.phone)} ไปรวมกับบัญชีที่เลือก แล้วลบ ${esc(m.phone)}</div>
     <div class="field"><i class="ti ti-search"></i><input id="mg" placeholder="เบอร์ (4 ตัวท้ายก็ได้) หรือชื่อ" autocomplete="off"></div>
     <div id="mgr" class="chips" style="grid-template-columns:1fr 1fr;margin-top:10px"></div>`, (a, b) => {
@@ -1172,7 +1265,7 @@ async function doneFlow(id) {
   if (r.phone) return act({ action: 'done', id: id }, 'เสร็จแล้ว');
   if (!B.recent) B.recent = (await api('barberMembers', '').catch(() => [])).slice(0, 8);
   const st = { nn: '', np: '' };
-  const sh = openSheet(`<h3>ให้แต้มใคร?</h3>
+  const sh = stackSheet(`<h3>ให้แต้มใคร?</h3>
     <div class="chips" style="grid-template-columns:1fr 1fr">
       ${B.recent.map(m => `<button class="chip" data-a="who" data-p="${esc(m.phone)}" data-n="${esc(m.name)}">${esc(m.name || m.phone)}<small>${esc(m.phone.slice(-4))}</small></button>`).join('')}
     </div>
@@ -1213,7 +1306,7 @@ function memTags(r) {
 }
 
 function adjustSheet(m) {
-  const sh = openSheet(`<h3>${m ? 'ปรับแต้ม · ' + esc(m.name || m.phone) : 'ลงแต้มลูกค้าเก่า'}</h3>
+  const sh = stackSheet(`<h3>${m ? 'ปรับแต้ม · ' + esc(m.name || m.phone) : 'ลงแต้มลูกค้าเก่า'}</h3>
     ${m ? '' : `<div class="field"><i class="ti ti-phone"></i><input id="jp" placeholder="เบอร์โทร" inputmode="tel" maxlength="12"></div>
     <div class="field"><i class="ti ti-user"></i><input id="jn" placeholder="ชื่อ" maxlength="40"></div>`}
     <div class="row" style="justify-content:center;gap:22px;border:0;padding:18px 0 8px">
@@ -1398,6 +1491,16 @@ const NAV_TIPS = {
   // กดค้างแล้วปล่อย = ดูคำอธิบายอย่างเดียว ไม่กดปุ่ม
   nav.addEventListener('click', e => { if (shown) { e.stopImmediatePropagation(); e.preventDefault(); shown = false; } }, true);
 })();
+
+/*** ---------- ปุ่มย้อนกลับของมือถือ ---------- ***/
+window.appBack = {
+  need: () => !!B.sess && (!!$('.shade') || B.view !== 'list'),
+  handle: () => {
+    if ($('.shade')) return popSheet();
+    if (B.view === 'set' && B.setPage) return leaveSetPage();
+    if (B.view !== 'list' && B.d) { B.view = 'list'; renderList(); loadDay(B.date).catch(() => {}); }
+  }
+};
 
 /*** ---------- แถบล่าง ---------- ***/
 function navOn(v) {
