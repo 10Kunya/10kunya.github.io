@@ -747,7 +747,13 @@ function stepper(g, i, f, v) {
   return `<span class="stp"><button data-a="step" data-g="${g}" data-i="${i}" data-f="${f}" data-d="-1">−</button><b>${v}</b><button data-a="step" data-g="${g}" data-i="${i}" data-f="${f}" data-d="1">+</button></span>`;
 }
 
+// ลิงก์ร้านคิดจากที่อยู่หน้าเว็บนี้เอง (หน้าช่าง = โฟลเดอร์หลัก, ลูกค้า = book/)
+const SITE_BASE = location.origin + location.pathname.replace(/[^/]*$/, '');
+const CUSTOMER_URL = SITE_BASE + 'book/';
+
 function renderSettings() {
+  B.set.url = CUSTOMER_URL;
+  B.set.links = [{ label: 'ลูกค้า', icon: 'user', full: CUSTOMER_URL }, { label: 'ช่าง', icon: 'scissors', full: SITE_BASE }];
   const s = B.set;
   const slots = [15, 20, 30, 40, 45, 60, 90];
   if (slots.indexOf(s.slotMin) < 0) slots.push(s.slotMin);
@@ -763,9 +769,8 @@ function renderSettings() {
     ${fold('links', 'ti-link', 'ลิงก์ร้าน', (s.links || []).map(l => `<div class="row" style="align-items:flex-start">
         <i class="ti ti-${esc(l.icon)} au" style="font-size:19px;margin-top:2px"></i>
         <span style="flex:1;min-width:0">${esc(l.label)}
-          <span class="mu" style="display:block;word-break:break-all">${esc(l.short)}</span>
-          <span class="mu" style="display:block;word-break:break-all;font-size:11px;color:var(--dim)">${esc(l.full)}</span></span>
-        <button class="au" data-a="copy" data-u="${esc(l.short)}" aria-label="คัดลอก" style="font-size:20px;padding:4px"><i class="ti ti-copy"></i></button>
+          <span class="mu" style="display:block;word-break:break-all">${esc(l.full)}</span></span>
+        <button class="au" data-a="copy" data-u="${esc(l.full)}" aria-label="คัดลอก" style="font-size:20px;padding:4px"><i class="ti ti-copy"></i></button>
       </div>`).join(''))}
     ${fold('push', 'ti-bell-ringing', 'แจ้งเตือนบนมือถือ', '<div id="pushbox" style="padding-bottom:14px"><div class="mu">กำลังตรวจ…</div></div>')}
     ${fold('manual', 'ti-book', 'คู่มือการใช้งาน', `<div class="man" style="padding-bottom:12px">${MANUAL}</div>`)}
@@ -1135,7 +1140,7 @@ $('#nav').addEventListener('click', async e => {
   if (v === 'add') { if (B.view !== 'list') { B.view = 'list'; renderList(); } return addSheet(''); }
   if (v === 'share') {
     const s = B.set || await api('barberSettings').catch(() => null);
-    if (s) { B.set = s; copyText(s.url); }
+    if (s) { B.set = s; copyText(CUSTOMER_URL); }
   }
 });
 
