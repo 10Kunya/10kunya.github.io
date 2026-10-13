@@ -98,6 +98,21 @@ a{color:inherit;text-decoration:none}
 .rw.dim{opacity:.5}
 .rw.can{border-color:var(--gold-line)}
 
+.tm-t{font-size:20px;margin-bottom:2px;padding-right:36px}
+.tm-h{color:var(--gold);font-size:14px;margin:18px 0 6px}
+.tm-r{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+.tm-n{min-width:84px;text-align:right;font-family:var(--serif);font-variant-numeric:lining-nums;font-size:17px}
+.tm ul{margin:0;padding-left:20px;line-height:1.8}
+/* เปิดให้ลูกค้าดูบนจอช่าง: เต็มจอ ตัวใหญ่ */
+.shade.full{padding:0;align-items:stretch}
+.shade.full .sheet{max-width:none;max-height:none;height:100%;border-radius:0;border:0;padding:calc(30px + env(safe-area-inset-top)) 24px calc(30px + env(safe-area-inset-bottom))}
+.shade.full .tm{max-width:640px;margin:0 auto;font-size:19px}
+.shade.full .tm-t{font-size:28px}
+.shade.full .tm .mu{font-size:16px}
+.shade.full .tm-h{font-size:18px;margin-top:24px}
+.shade.full .tm-r{padding:12px 0}
+.shade.full .tm-n{font-size:22px;min-width:110px}
+.shade.full .sx{top:calc(14px + env(safe-area-inset-top));font-size:26px;width:48px;height:48px}
 .toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 18px;border-radius:24px;font-size:14px;z-index:30;animation:fade .15s;white-space:nowrap}
 .load{display:flex;justify-content:center;padding:80px 0;color:var(--dim);font-size:26px}
 .load i{animation:spin 1s linear infinite}
@@ -487,6 +502,27 @@ function rewardList(rewards, points, clickable) {
       <i class="ti ti-${esc(r.icon)} ${can ? 'au' : ''}"></i><span style="flex:1">${esc(r.name)}</span>
       <span class="sv ${can ? 'au' : ''}" style="font-size:17px">${r.cost}</span></${tag}>`;
   }).join('');
+}
+
+// เงื่อนไขสมาชิกและรางวัล (สร้างจากค่าที่ร้านตั้งไว้)
+function termsHtml(t) {
+  const tiers = t.tiers.slice().sort((a, b) => a.min - b.min), hd = (ic, x) => `<div class="tm-h"><i class="ti ti-${ic}"></i> ${x}</div>`;
+  const days = b => [1, 2, 3, 4, 5, 6, 0].filter(n => b.days.indexOf(n) >= 0).map(n => WD[n]).join(' ');
+  const extra = [
+    t.birthdayBonus ? `เดือนเกิด: มาตัดครั้งแรกของเดือนเกิด +${t.birthdayBonus} แต้ม (ปีละครั้ง)` : '',
+    t.referralBonus ? `ชวนเพื่อน: เพื่อนใหม่มาตัดครั้งแรก ได้คนละ +${t.referralBonus} แต้ม` : ''
+  ].concat(t.boosts.map(b => `${days(b)} ${b.from}–${b.to} แต้ม ×${b.mult}`)).filter(Boolean);
+  return `<div class="tm">
+    <div class="tm-t">เงื่อนไขสมาชิกและรางวัล</div>
+    <div class="mu">สมัครอัตโนมัติด้วยเบอร์โทรเมื่อมาตัดครั้งแรก</div>
+    ${hd('medal', 'ระดับสมาชิก')}
+    ${tiers.map((x, i) => `<div class="tm-r"><span style="flex:1;color:${TIER_C[i % TIER_C.length]}"><i class="ti ${tiers.length > 1 && i === tiers.length - 1 ? 'ti-crown' : 'ti-medal'}"></i> ${esc(x.name)}</span>
+      <span class="mu">${i ? 'สะสมครบ ' + x.min : 'เริ่มต้น'}</span><span class="au tm-n">+${x.earn} / ครั้ง</span></div>`).join('')}
+    ${t.rewards.length ? hd('gift', 'รางวัล') + t.rewards.map(r => `<div class="tm-r"><i class="ti ti-${esc(r.icon)} au"></i><span style="flex:1">${esc(r.name)}</span><span class="au tm-n">${r.cost} แต้ม</span></div>`).join('') : ''}
+    ${extra.length ? hd('bolt', 'แต้มพิเศษ') + '<ul>' + extra.map(x => `<li>${esc(x)}</li>`).join('') + '</ul>' : ''}
+    ${hd('info-circle', 'กติกา')}
+    <ul class="mu"><li>แต้มไม่มีวันหมดอายุ</li><li>ระดับวัดจากแต้มสะสมรวม แลกรางวัลแล้วระดับไม่ลด</li><li>แลกรางวัลที่ร้าน แจ้งช่างตอนมาตัด</li>
+      ${t.note ? t.note.split(/\n+/).filter(Boolean).map(x => `<li style="color:var(--text)">${esc(x)}</li>`).join('') : ''}</ul></div>`;
 }
 
 async function copyText(text) {
@@ -1028,8 +1064,16 @@ function setDirty() {
   return JSON.stringify(B.set) !== JSON.stringify(B.setSaved);
 }
 
+// เงื่อนไขสมาชิก: เปิดเต็มจอให้ลูกค้าดู (ใช้ค่าที่บันทึกแล้ว)
+const termsBtn = () => `<button class="btn line" data-a="terms" style="margin-bottom:8px;color:var(--gold);border-color:var(--gold-line)"><i class="ti ti-file-description"></i> เงื่อนไขสมาชิก · เปิดให้ลูกค้าดู</button>`;
+function showTerms() {
+  const s = B.setSaved;
+  const sh = openSheet(termsHtml({ tiers: s.tiers, rewards: s.rewards, boosts: s.boosts.filter(b => b.on !== false), note: s.memberNote || '',
+    birthdayBonus: s.birthdayOn ? s.birthdayBonus : 0, referralBonus: s.referralOn ? s.referralBonus : 0 }));
+  sh.classList.add('full');
+}
 function menuHtml(s, sel) {
-  return Object.keys(SET_PAGES).map(k => `<button class="menu-it ${k === sel ? 'sel' : ''}" data-a="page" data-p="${k}">
+  return termsBtn() + Object.keys(SET_PAGES).map(k => `<button class="menu-it ${k === sel ? 'sel' : ''}" data-a="page" data-p="${k}">
     <span class="mic"><i class="ti ${SET_PAGES[k][0]}"></i></span>
     <span style="flex:1;min-width:0">${SET_PAGES[k][1]}<span class="mu" style="display:block">${SET_PAGES[k][2](s)}</span></span>
     <i class="ti ti-chevron-right mu"></i></button>`).join('');
@@ -1068,6 +1112,7 @@ function renderSettings() {
   if (!pg) {
     $('#app').innerHTML = `<div class="set">
       <div class="head"><span class="sv brand">ตั้งค่า</span></div>
+      ${termsBtn()}
       ${Object.keys(SET_PAGES).map(k => `<button class="menu-it" data-a="page" data-p="${k}">
         <span class="mic"><i class="ti ${SET_PAGES[k][0]}"></i></span>
         <span style="flex:1;min-width:0">${SET_PAGES[k][1]}<span class="mu" style="display:block">${SET_PAGES[k][2](s)}</span></span>
@@ -1136,7 +1181,10 @@ const PAGE_BODY = {
       ${stepper('rewards', i, 'cost', r.cost)}<input type="hidden" data-f="cost" value="${r.cost}">
       <button class="x" data-a="rdel" data-i="${i}" aria-label="ลบ"><i class="ti ti-x"></i></button>
     </div>`).join('')}
-    <button class="mu" data-a="radd" style="font-size:14px;padding:4px 0 8px"><i class="ti ti-plus"></i> เพิ่มรางวัล</button>`,
+    <button class="mu" data-a="radd" style="font-size:14px;padding:4px 0 8px"><i class="ti ti-plus"></i> เพิ่มรางวัล</button>
+    <div class="mu" style="padding:16px 0 8px"><i class="ti ti-file-description"></i> ข้อความเพิ่มเติมในเงื่อนไข (ไม่ใส่ก็ได้)</div>
+    <textarea id="mnote" rows="3" maxlength="300" placeholder="เช่น แลกได้ครั้งละ 1 รางวัล · ใช้กับตัวเองเท่านั้น">${esc(s.memberNote || '')}</textarea>
+    <div class="mu" style="margin-top:4px">ขึ้นบรรทัดใหม่ = ข้อใหม่ · ลูกค้าเห็นในหน้าเงื่อนไข</div>`,
   promo: s => `
     <div class="card pcard ${s.birthdayOn ? '' : 'off'}">
       <div class="prow"><i class="ti ti-cake au"></i><span style="flex:1">โบนัสเดือนเกิด<span class="mu" style="display:block">${s.birthdayOn ? 'มาตัดครั้งแรกในเดือนเกิด ปีละครั้ง' : 'ปิดอยู่ · ลูกค้าจะไม่เห็นปุ่มเลือกเดือนเกิด'}</span></span>${sw(s.birthdayOn, 'data-a="tog" data-k="birthdayOn"')}</div>
@@ -1183,6 +1231,7 @@ const PAGE_BODY = {
 // อ่านค่าจากหน้าที่เปิดอยู่ (เฉพาะช่องที่มีในหน้านั้น)
 function readSettings() {
   const s = B.set, v = id => $(id) ? $(id).value : null;
+  if ($('#mnote')) s.memberNote = v('#mnote').trim();
   if ($('#ntx')) s.notice = { on: s.notice.on, text: v('#ntx').trim(), until: v('#nun') || '' };
   if ($('#so')) { s.open = v('#so'); s.close = v('#sc'); s.slotMin = +v('#ss'); s.phone = v('#sp').trim(); s.mapUrl = v('#sm').trim(); }
   const f = (el, k) => $('input[data-f="' + k + '"]', el).value;
@@ -1242,6 +1291,7 @@ $('#app').addEventListener('click', async e => {
   const b = e.target.closest('[data-a]'); if (!b) return;
   const a = b.dataset.a, s = B.set;
   if (a === 'page') return openSetPage(b.dataset.p);
+  if (a === 'terms') return showTerms();
   if (a === 'back') return leaveSetPage();
   readSettings();
   if (a === 'adv-' || a === 'adv+') { s.advanceDays = Math.max(0, Math.min(30, s.advanceDays + (a === 'adv+' ? 1 : -1))); return renderSettings(); }
@@ -1796,6 +1846,7 @@ const MANUAL = `
     <li>ตั้งปุ่มราคาได้ที่ ตั้งค่า → ราคา</li>
     <li><i class="ti ti-message-dots"></i> บนคิว = ลูกค้าฝากข้อความไว้ แตะคิวเพื่ออ่าน</li>
     <li>ตั้งค่า → ประกาศถึงลูกค้า = ข้อความที่ขึ้นบนสุดของหน้าจองคิว</li>
+    <li>ลูกค้าถามเรื่องแต้ม: ตั้งค่า → ปุ่มบนสุด "เงื่อนไขสมาชิก" เปิดเต็มจอให้ลูกค้าอ่าน (ลูกค้าดูเองได้ในหน้าสมาชิก)</li>
   </ul>
   <h4><i class="ti ti-chart-bar"></i> สรุป</h4>
   <ul>
