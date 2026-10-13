@@ -29,7 +29,7 @@
 html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.55}
 html{touch-action:manipulation;-webkit-text-size-adjust:100%}
 body.lock{overflow:hidden}
-button,input,select{font:inherit;color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
 button{background:none;border:0;padding:0;cursor:pointer}
 a{color:inherit;text-decoration:none}
 .wrap{max-width:440px;margin:0 auto;padding:calc(22px + env(safe-area-inset-top)) 20px calc(96px + env(safe-area-inset-bottom))}
@@ -256,6 +256,14 @@ body.tab-p .k b{font-size:34px}
 body.tab-l .sum{display:grid;grid-template-columns:minmax(300px,1fr) 1.3fr;gap:36px;align-items:start}
 body.tab-l .sum > div + div{margin-top:0 !important}
 body.tab-l .k b{font-size:34px}
+.numd{font-family:var(--serif);font-variant-numeric:lining-nums;font-size:40px;color:var(--gold);text-align:center;min-height:56px;border-bottom:1px solid var(--line2);margin-bottom:14px}
+.npad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.npad button{border:1px solid var(--line2);border-radius:12px;padding:12px 0;font-family:var(--serif);font-variant-numeric:lining-nums;font-size:24px}
+.npad button:active{background:var(--gold-bg)}
+.pq{border-left:3px solid var(--gold);background:var(--gold-bg);border-radius:0 10px 10px 0;padding:8px 12px;margin:0 0 10px;line-height:1.5;word-break:break-word}
+.set textarea{width:100%;background:transparent;border:1px solid var(--gold-line);border-radius:12px;outline:0;padding:12px;font-size:18px;line-height:1.55;resize:vertical}
+.pchip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line2);border-radius:22px;padding:4px 6px 4px 14px;margin:0 8px 8px 0;font-family:var(--serif);font-variant-numeric:lining-nums;font-size:21px;color:var(--gold)}
+.pchip button{color:var(--mute);font-size:17px;padding:6px 8px}
 /* หน้าตั้งค่า: ตัวใหญ่ อ่านง่าย */
 .set{font-size:18px}
 .set .mu{font-size:15px !important}
@@ -671,7 +679,8 @@ function cellHtml(c) {
   const name = kind === 'block' ? '<i class="ti ti-lock"></i>' : kind === 'free' || kind === 'cont' ? '' :
     esc(r.name) + (r.source === 'walkin' && !r.phone ? ' <i class="ti ti-walk" style="font-size:13px;opacity:.6"></i>' : '') +
     (r.m && r.m.gift ? ' <i class="ti ti-gift au" style="font-size:14px"></i>' : '') +
-    (r.m && r.m.warn ? ' <i class="ti ti-alert-triangle" style="font-size:14px;color:var(--warn)"></i>' : '');
+    (r.m && r.m.warn ? ' <i class="ti ti-alert-triangle" style="font-size:14px;color:var(--warn)"></i>' : '') +
+    (r.note ? ' <i class="ti ti-message-dots au" style="font-size:14px"></i>' : '');
   return `<div class="${cls}" data-a="cell" data-t="${time}" ${r ? `data-id="${r.id}"` : ''}>
     <span class="t">${esc(r ? r.time : time)}</span><span class="n">${name}</span></div>`;
 }
@@ -775,7 +784,7 @@ function checkNew(n) {
   const old = $('.newbk'); if (old) old.remove();
   const el = document.createElement('button');
   el.className = 'newbk';
-  el.innerHTML = `<i class="ti ti-bell-ringing"></i><span><b>จองใหม่ · ${esc(n.name)}</b><br>${dShort(n.date)} · <span class="sv">${esc(n.time)}</span></span><i class="ti ti-x" style="margin-left:auto;opacity:.6"></i>`;
+  el.innerHTML = `<i class="ti ti-bell-ringing"></i><span><b>จองใหม่ · ${esc(n.name)}</b><br>${dShort(n.date)} · <span class="sv">${esc(n.time)}</span>${n.note ? `<br>💬 ${esc(n.note)}` : ''}</span><i class="ti ti-x" style="margin-left:auto;opacity:.6"></i>`;
   el.onclick = () => { el.remove(); B.view = 'list'; loadDay(n.date).catch(() => {}); };
   document.body.appendChild(el);
 }
@@ -808,9 +817,12 @@ function rowSheet(r) {
   else if (r.status === 'block') acts = '<button class="act gold" data-a="unblock"><i class="ti ti-lock-open"></i>เปิดรับคิวช่วงนี้</button>';
   else acts =
     (r.phone ? `<a class="act" href="tel:${esc(r.phone)}"><i class="ti ti-phone"></i>${esc(r.phone)}</a>` : '') +
+    (r.status === 'done' ? `<button class="act" data-a="price"><i class="ti ti-receipt"></i>${r.price ? 'ราคา <span class="sv au" style="font-size:19px">฿' + r.price + '</span> · แตะเพื่อแก้' : 'ใส่ราคา'}</button>` : '') +
     '<button class="act" data-a="booked"><i class="ti ti-arrow-back-up"></i>กลับเป็นรอคิว</button>';
-  openSheet(head + memTags(r) + acts, a => {
+  const note = r.note ? `<div class="pq"><i class="ti ti-message-dots au"></i> ${esc(r.note)}</div>` : '';
+  openSheet(head + memTags(r) + note + acts, a => {
     if (a === 'done') return doneFlow(r.id);
+    if (a === 'price') return priceSheet(r, p => act({ action: 'price', id: r.id, price: p }, p ? 'ราคา ฿' + p : 'ลบราคาแล้ว'), true);
     if (a === 'move') return moveSheet(r, B.d.date);
     if (a === 'cancel') return askConfirm(`ยกเลิกคิว ${r.time} ${r.name}?`, 'ยกเลิกคิว', () => act({ action: 'cancel', id: r.id }, 'ยกเลิกแล้ว'));
     act({ action: a, id: r.id }, { done: 'เสร็จแล้ว', noshow: 'บันทึกว่าไม่มา', unblock: 'เปิดรับคิวแล้ว', booked: 'กลับเป็นรอคิวแล้ว' }[a]);
@@ -976,6 +988,8 @@ const clone = o => JSON.parse(JSON.stringify(o));
 /*** หน้าตั้งค่า = รายการหมวด → แตะเข้าแต่ละหมวด ***/
 const SET_PAGES = {
   shop: ['ti-building-store', 'ร้าน', s => `${s.open}–${s.close} · คิวละ ${s.slotMin} นาที · ${closedText(s.closedDays)}`],
+  price: ['ti-receipt', 'ราคา', s => s.prices.length ? s.prices.map(v => '฿' + v).join(' · ') : 'ยังไม่ได้ตั้ง'],
+  notice: ['ti-speakerphone', 'ประกาศถึงลูกค้า', s => s.notice.on && s.notice.text ? `<span class="au">เปิดอยู่</span> · ${esc(s.notice.text.slice(0, 24))}${s.notice.text.length > 24 ? '…' : ''}` : 'ปิดอยู่'],
   member: ['ti-medal', 'สมาชิกและรางวัล', s => `${s.tiers.length} ระดับ · ${s.rewards.length} รางวัล`],
   promo: ['ti-bolt', 'โปรโมชั่น', s => { const all = [s.birthdayOn, s.referralOn].concat(s.boosts.map(b => b.on !== false)); return `เปิด ${all.filter(Boolean).length} จาก ${all.length}`; }],
   warn: ['ti-alert-triangle', 'การเตือน', s => `ไม่มา ${s.noshowWarn} ครั้ง · หายเกิน ${s.lostDays} วัน`],
@@ -984,7 +998,7 @@ const SET_PAGES = {
   manual: ['ti-book', 'คู่มือการใช้งาน', () => 'วิธีใช้ทุกส่วนของหน้าช่าง'],
   account: ['ti-lock', 'บัญชีช่าง', () => 'เปลี่ยน PIN · ชีตข้อมูล · ออกจากระบบ']
 };
-const EDIT_PAGES = ['shop', 'member', 'warn'];   // หน้าที่ต้องกด "บันทึก" (โปรโมชั่นบันทึกทันที)
+const EDIT_PAGES = ['shop', 'price', 'notice', 'member', 'warn'];   // หน้าที่ต้องกด "บันทึก" (โปรโมชั่นบันทึกทันที)
 
 async function showSettings(page) {
   B.view = 'set'; navOn('set');
@@ -1030,6 +1044,7 @@ function pageBody(pg, s) {
 function afterPage(pg, s) {
   if (pg === 'share') drawQr(CUSTOMER_URL);
   if (pg === 'push') renderPush();
+  if (pg === 'notice') $('#ntx').oninput = e => { $('#ntc').textContent = e.target.value.length; };
   if (pg === 'shop') $('#sh').onchange = e => {
     readSettings();
     const v = e.target.value;
@@ -1091,6 +1106,18 @@ const PAGE_BODY = {
     <div class="field"><i class="ti ti-phone"></i><input id="sp" placeholder="เบอร์ร้าน" inputmode="tel" value="${esc(s.phone)}"></div>
     <div class="field"><i class="ti ti-map-pin"></i><input id="sm" placeholder="ลิงก์ Google Maps ของร้าน" value="${esc(s.mapUrl)}"></div>`;
   },
+  price: s => `
+    <div class="mu" style="margin-bottom:12px">ปุ่มราคาที่ขึ้นตอนกด "เสร็จ" · แตะ ✕ เพื่อลบ</div>
+    <div>${s.prices.map((v, i) => `<span class="pchip">${v}<button data-a="pdel" data-i="${i}" aria-label="ลบ"><i class="ti ti-x"></i></button></span>`).join('')}</div>
+    <button class="mu" data-a="padd" style="padding:6px 0"><i class="ti ti-plus"></i> เพิ่มราคา</button>`,
+  notice: s => `
+    <div class="row"><i class="ti ti-speakerphone"></i><span>แสดงบนหน้าลูกค้า</span>${sw(s.notice.on, 'data-a="ntog"')}</div>
+    <textarea id="ntx" rows="4" maxlength="200" placeholder="เช่น หยุดพิเศษ 23 ต.ค. เปิดปกติ 24 ต.ค." style="margin-top:14px">${esc(s.notice.text)}</textarea>
+    <div class="mu" style="text-align:right;margin-top:4px"><span id="ntc">${s.notice.text.length}</span>/200</div>
+    <div class="row" style="border:0"><i class="ti ti-calendar-event"></i><span>แสดงถึงวันที่</span>
+      <input type="date" id="nun" value="${esc(s.notice.until)}" min="${new Date().toISOString().slice(0, 10)}" style="font-family:var(--sans);font-size:18px;color:var(--gold);background:transparent;border:0;outline:0">
+      ${s.notice.until ? '<button data-a="nuclr" class="mu" style="padding:8px" aria-label="ไม่กำหนดวัน"><i class="ti ti-x"></i></button>' : ''}</div>
+    <div class="mu">ไม่ใส่วันที่ = แสดงจนกว่าจะปิดสวิตช์ · เลยวันที่แล้วซ่อนเอง</div>`,
   member: s => `
     <div class="mu" style="padding:4px 0 4px"><i class="ti ti-medal"></i> ระดับสมาชิก</div>
     <div class="mu" style="font-size:12px;margin-bottom:8px">วัดจากแต้มสะสมรวม · แลกรางวัลแล้วระดับไม่ลด</div>
@@ -1156,6 +1183,7 @@ const PAGE_BODY = {
 // อ่านค่าจากหน้าที่เปิดอยู่ (เฉพาะช่องที่มีในหน้านั้น)
 function readSettings() {
   const s = B.set, v = id => $(id) ? $(id).value : null;
+  if ($('#ntx')) s.notice = { on: s.notice.on, text: v('#ntx').trim(), until: v('#nun') || '' };
   if ($('#so')) { s.open = v('#so'); s.close = v('#sc'); s.slotMin = +v('#ss'); s.phone = v('#sp').trim(); s.mapUrl = v('#sm').trim(); }
   const f = (el, k) => $('input[data-f="' + k + '"]', el).value;
   if (document.querySelector('.ed.tier')) {
@@ -1224,6 +1252,10 @@ $('#app').addEventListener('click', async e => {
   if (a === 'icon') { const r = s.rewards[+b.dataset.i]; r.icon = ICONS[(ICONS.indexOf(r.icon) + 1) % ICONS.length]; return renderSettings(); }
   if (a === 'rdel') { s.rewards.splice(+b.dataset.i, 1); return renderSettings(); }
   if (a === 'hdel') { s.holidays = s.holidays.filter(h => h !== b.dataset.h); return renderSettings(); }
+  if (a === 'pdel') { s.prices.splice(+b.dataset.i, 1); return renderSettings(); }
+  if (a === 'padd') return numSheet('เพิ่มราคา', v => { closeSheet(); if (s.prices.indexOf(v) < 0) s.prices.push(v); s.prices.sort((x, y) => x - y); renderSettings(); });
+  if (a === 'ntog') { s.notice.on = !s.notice.on; return renderSettings(); }
+  if (a === 'nuclr') { s.notice.until = ''; return renderSettings(); }
   if (a === 'step') {
     const o = s[b.dataset.g][+b.dataset.i], f = b.dataset.f, step = f === 'min' ? 5 : 1;
     o[f] = Math.max(f === 'min' ? step : 1, o[f] + step * (+b.dataset.d));
@@ -1524,7 +1556,8 @@ function mergeSheet(m) {
 async function doneFlow(id) {
   const r = B.d.rows.find(x => x.id === id);
   if (!r) return;
-  if (r.phone) return act({ action: 'done', id: id }, 'เสร็จแล้ว');
+  const finish = extra => priceSheet(r, p => act(Object.assign({ action: 'done', id: id, price: p }, extra), 'เสร็จแล้ว' + (p ? ' · ฿' + p : '')));
+  if (r.phone) return finish({});
   if (!B.recent) B.recent = (await api('barberMembers', '').catch(() => [])).slice(0, 8);
   const st = { nn: '', np: '' };
   const sh = stackSheet(`<h3>ให้แต้มใคร?</h3>
@@ -1537,15 +1570,47 @@ async function doneFlow(id) {
     <div class="err" id="ge"></div>
     <button class="btn" data-a="new" style="margin-top:14px">ให้แต้ม</button>
     <button class="link" data-a="skip">ข้าม · ไม่ให้แต้ม</button>`, (a, b) => {
-      if (a === 'who') return act({ action: 'done', id: id, phone: b.dataset.p, name: b.dataset.n }, 'เสร็จแล้ว');
-      if (a === 'skip') return act({ action: 'done', id: id }, 'เสร็จแล้ว');
+      if (a === 'who') return finish({ phone: b.dataset.p, name: b.dataset.n });
+      if (a === 'skip') return finish({});
       if (a === 'new') {
         const p = $('#gp', sh).value.replace(/\D/g, '');
         if (!/^0\d{8,9}$/.test(p)) { $('#ge', sh).textContent = 'ใส่เบอร์โทร 10 หลัก'; return; }
-        act({ action: 'done', id: id, phone: p, name: $('#gn', sh).value }, 'เสร็จแล้ว');
+        finish({ phone: p, name: $('#gn', sh).value });
       }
     });
   sh.classList.add('big');
+}
+
+// เลือกราคา: แตะปุ่มเดียวจบ · กรอบทอง = ราคาครั้งก่อนของลูกค้าคนนี้ · "อื่น ๆ" = แป้นตัวเลข
+function priceSheet(r, onPick, edit) {
+  const list = (B.d.prices || []).slice(), hint = edit ? r.price : r.last;
+  const sh = stackSheet(`<h3>ราคา · <span class="sv au">${esc(r.time)}</span> ${esc(r.name || '')}</h3>
+    ${hint && !edit ? `<div class="mu" style="margin:-6px 0 12px">ครั้งก่อนจ่าย ฿${hint}</div>` : ''}
+    <div class="chips sv" style="grid-template-columns:repeat(3,1fr)">
+      ${list.map(v => `<button class="chip ${v === hint ? 'on' : ''}" data-a="p" data-v="${v}" style="font-size:22px !important">${v}</button>`).join('')}
+      <button class="chip" data-a="other" style="font-family:var(--sans);font-size:17px !important">อื่น ๆ</button></div>
+    <button class="link" data-a="skip">${edit ? (r.price ? 'ลบราคา' : 'กลับ') : 'ข้าม · ไม่ใส่ราคา'}</button>`, (a, b) => {
+      if (a === 'p') return onPick(+b.dataset.v);
+      if (a === 'skip') return edit && !r.price ? popSheet() : onPick(0);
+      if (a === 'other') return numSheet('ราคาอื่น', v => onPick(v));
+    });
+  sh.classList.add('big');
+}
+
+// แป้นตัวเลข (ราคา) — ไม่ต้องเปิดคีย์บอร์ด
+function numSheet(title, onOk) {
+  let v = '';
+  const sh = stackSheet(`<h3>${esc(title)}</h3><div class="numd" id="nd">฿</div>
+    <div class="npad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button data-a="k" data-k="${n}">${n}</button>`).join('')}
+      <button data-a="k" data-k="del" aria-label="ลบ"><i class="ti ti-backspace"></i></button><button data-a="k" data-k="0">0</button>
+      <button data-a="ok" class="au" aria-label="ตกลง"><i class="ti ti-check"></i></button></div>`, (a, b) => {
+      if (a === 'k') {
+        const k = b.dataset.k;
+        v = k === 'del' ? v.slice(0, -1) : (v + k).replace(/^0+/, '').slice(0, 6);
+        $('#nd', sh).textContent = '฿' + v;
+      }
+      if (a === 'ok' && +v > 0) onOk(+v);
+    });
 }
 
 // ข้อความฉลองตอนลูกค้าขึ้นระดับ
@@ -1724,6 +1789,13 @@ const MANUAL = `
     <li>แต้มคูณ: ตั้งวัน + ช่วงเวลา + ×2–×5 คิวในช่วงนั้นได้แต้มคูณ ลูกค้าเห็นป้ายตอนเลือกเวลา</li>
     <li>เดือนเกิด: ลูกค้าเลือกเดือนเกิดในบัตรสมาชิก มาตัดครั้งแรกของเดือนนั้นได้โบนัส (ปีละครั้ง)</li>
     <li>ชวนเพื่อน: ลูกค้าใหม่ใส่เบอร์ผู้ชวนตอนจอง พอมาตัดครั้งแรกเสร็จ ได้แต้มทั้งคู่</li>
+  </ul>
+  <h4><i class="ti ti-receipt"></i> ราคาและข้อความ</h4>
+  <ul>
+    <li>กดเสร็จ → แตะราคา (กรอบทอง = ราคาที่ลูกค้าคนนี้จ่ายครั้งก่อน) · "อื่น ๆ" กดตัวเลขเอง · แตะคิวที่เสร็จแล้วเพื่อแก้ราคา</li>
+    <li>ตั้งปุ่มราคาได้ที่ ตั้งค่า → ราคา</li>
+    <li><i class="ti ti-message-dots"></i> บนคิว = ลูกค้าฝากข้อความไว้ แตะคิวเพื่ออ่าน</li>
+    <li>ตั้งค่า → ประกาศถึงลูกค้า = ข้อความที่ขึ้นบนสุดของหน้าจองคิว</li>
   </ul>
   <h4><i class="ti ti-chart-bar"></i> สรุป</h4>
   <ul>

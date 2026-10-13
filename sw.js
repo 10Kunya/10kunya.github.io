@@ -21,7 +21,7 @@ async function show() {
     const r = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ fn: 'barberNewest', args: [sess] }), credentials: 'omit', signal: ctl.signal });
     clearTimeout(t);
     const n = (await r.json()).result;
-    if (n) await self.registration.showNotification('จองใหม่ · ' + n.name, Object.assign({ body: dShort(n.date) + ' · ' + n.time, renotify: false, silent: true }, OPTS));
+    if (n) await self.registration.showNotification('จองใหม่ · ' + n.name, Object.assign({ body: dShort(n.date) + ' · ' + n.time + (n.note ? '\n💬 ' + n.note : ''), renotify: false, silent: true }, OPTS));
   } catch (err) {}
 }
 

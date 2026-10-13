@@ -22,7 +22,7 @@
 html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.55}
 html{touch-action:manipulation;-webkit-text-size-adjust:100%}
 body.lock{overflow:hidden}
-button,input,select{font:inherit;color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
 button{background:none;border:0;padding:0;cursor:pointer}
 a{color:inherit;text-decoration:none}
 .wrap{max-width:440px;margin:0 auto;padding:calc(22px + env(safe-area-inset-top)) 20px calc(96px + env(safe-area-inset-bottom))}
@@ -124,6 +124,11 @@ a{color:inherit;text-decoration:none}
 .tk-bar a,.tk-bar button{color:var(--mute);font-size:21px;padding:8px 4px;flex:1;display:flex;flex-direction:column;align-items:center;gap:2px}
 .tk-bar small{font-size:11px;line-height:1.2}
 .tk-bar .warn{color:var(--warn)}
+.shopnote{border:1px solid var(--gold-line);background:var(--gold-bg);border-radius:12px;padding:11px 14px;display:flex;gap:10px;align-items:flex-start;margin-bottom:18px;line-height:1.55;white-space:pre-line;word-break:break-word}
+.shopnote .ti{color:var(--gold);font-size:20px;margin-top:1px}
+#notebox textarea{width:100%;background:transparent;border:1px solid var(--line2);border-radius:10px;outline:0;padding:10px 12px;font-size:16px;line-height:1.5;resize:none;margin-top:8px}
+#notebox textarea:focus{border-color:var(--gold-line)}
+#notebox textarea::placeholder{color:var(--dim)}
 .wa{position:absolute;top:50%;transform:translateY(-50%);width:38px;height:38px;border-radius:50%;background:var(--bg);border:1px solid var(--line2);color:var(--mute);font-size:18px;display:flex;align-items:center;justify-content:center;z-index:1}
 .wa:active{color:var(--gold);border-color:var(--gold-line)}
 .wa.l{left:10px}.wa.r{right:10px}
@@ -343,6 +348,11 @@ async function load(except) {
   return true;
 }
 
+// ประกาศจากร้าน (ช่างตั้งในหน้าตั้งค่า)
+function shopNoteHtml() {
+  return S.d.notice ? `<div class="shopnote"><i class="ti ti-speakerphone"></i><span>${esc(S.d.notice)}</span></div>` : '';
+}
+
 // แถบแจ้งว่าร้านยกเลิกคิวให้
 function noticeHtml() {
   if (!S.notice || !S.notice.length) return '';
@@ -395,7 +405,7 @@ function showBook(resched, forOther) {
       <div class="mu">${esc(d.open)} – ${esc(d.close)} · ${esc(closedText(d.closedDays))}</div></div>
       ${S.resched ? '' : '<button id="mem" class="mu" style="font-size:13px;text-align:center"><i class="ti ti-id-badge-2 au" style="font-size:22px"></i><br>สมาชิก</button>'}
     </div>
-    ${noticeHtml()}
+    ${shopNoteHtml()}${noticeHtml()}
     ${S.resched ? `<div class="mu" style="margin:-8px 0 16px"><i class="ti ti-pencil"></i> เลื่อนคิวเดิม ${dShort(S.resched.date)} ${esc(S.resched.time)}</div>` : ''}
     ${S.forOther ? '<div class="mu" style="margin:-8px 0 16px"><i class="ti ti-user-plus"></i> จองให้คนอื่น · ใส่ชื่อและเบอร์ของคนที่จะมาตัด</div>' : ''}
     <div class="chips" id="days" style="grid-template-columns:repeat(${Math.min(d.days.length, 4)},1fr);margin-bottom:22px"></div>
@@ -409,6 +419,8 @@ function showBook(resched, forOther) {
     ${d.referralBonus ? `<details id="refbox" style="margin-top:10px"><summary class="mu" style="cursor:pointer;list-style:none"><i class="ti ti-users-plus"></i> มีเพื่อนแนะนำ? (ลูกค้าใหม่ · ได้คนละ ${d.referralBonus || 0} แต้ม)</summary>
       <div class="field"><i class="ti ti-phone"></i><input id="rf" placeholder="เบอร์ของเพื่อนที่แนะนำ" inputmode="tel" maxlength="12"></div>
       <div class="err" id="erf"></div></details>` : ''}`}
+    <details id="notebox" style="margin-top:10px" ${S.resched && S.resched.note ? 'open' : ''}><summary class="mu" style="cursor:pointer;list-style:none"><i class="ti ti-message-plus"></i> ฝากข้อความถึงช่าง (ไม่ใส่ก็ได้)</summary>
+      <textarea id="nt" rows="2" maxlength="100" placeholder="เช่น ขอรองทรงต่ำ / อาจมาสาย 10 นาที">${esc(S.resched ? S.resched.note || '' : '')}</textarea></details>
     <div class="err" id="ego" style="margin-top:14px"></div>
     <button class="btn" id="go" style="margin-top:18px"></button>
     ${S.resched ? '' : '<div class="mu" style="text-align:center;margin-top:10px;font-size:12px"><i class="ti ti-shield-lock"></i> ร้านเก็บชื่อและเบอร์ไว้เพื่อจองคิวและสะสมแต้มเท่านั้น</div>'}
@@ -582,7 +594,8 @@ async function submit() {
   let res;
   try {
     const referrer = $('#rf') ? $('#rf').value.replace(/\D/g, '') : '';
-    res = await call('book', { date: S.day, time: S.pick, name, phone, referrer, token: S.resched ? S.resched.token : '' });
+    const note = $('#nt') ? $('#nt').value.trim() : '';
+    res = await call('book', { date: S.day, time: S.pick, name, phone, referrer, note, token: S.resched ? S.resched.token : '' });
   } catch (e) {
     go.classList.remove('busy');
     $('#ego').textContent = 'ส่งไม่สำเร็จ · ลองใหม่อีกครั้ง';
@@ -616,18 +629,11 @@ async function submit() {
 }
 
 /*** ---------- ตั๋ว ---------- ***/
-function calUrl(t) {
-  const p = ymd(t.date), s = toMin(t.time), e = s + (+t.dur || S.d.slotMin);
-  const f = m => '' + p[0] + ('0' + p[1]).slice(-2) + ('0' + p[2]).slice(-2) + 'T' + toHM(m).replace(':', '') + '00';
-  return 'https://calendar.google.com/calendar/render?action=TEMPLATE&ctz=Asia/Bangkok'
-    + '&text=' + encodeURIComponent('ตัดผม · ' + S.d.shop) + '&dates=' + f(s) + '/' + f(e);
-}
-
 function showTickets(focus) {
   S.mode = 'ticket'; S.resched = null; S.forOther = false;
   const d = S.d;
   if (!d.tickets.length) return showBook();
-  $('#app').innerHTML = noticeHtml() + d.tickets.map(t => `
+  $('#app').innerHTML = shopNoteHtml() + noticeHtml() + d.tickets.map(t => `
     <div class="card" style="margin-bottom:16px${focus && focus !== t.token ? ';opacity:.75' : ''}">
       <div class="tk-top">
         <i class="ti ti-scissors au" style="font-size:20px"></i>
@@ -635,9 +641,9 @@ function showTickets(focus) {
         <div class="sv au tk-time">${esc(t.time)}</div>
         <div class="mu">${dLong(t.date)}</div>
         <div style="margin-top:12px">${esc(t.name)}</div>
+        ${t.note ? `<div class="mu" style="margin-top:4px"><i class="ti ti-message-dots"></i> ${esc(t.note)}</div>` : ''}
       </div>
       <div class="tk-bar">
-        <a href="${calUrl(t)}" target="_blank"><i class="ti ti-calendar-plus"></i><small>ปฏิทิน</small></a>
         ${d.mapUrl ? `<a href="${esc(d.mapUrl)}" target="_blank"><i class="ti ti-map-pin"></i><small>แผนที่</small></a>` : ''}
         ${d.phone ? `<a href="tel:${esc(d.phone)}"><i class="ti ti-phone"></i><small>โทร</small></a>` : ''}
         <button data-a="link" data-k="${t.token}"><i class="ti ti-link"></i><small>เก็บลิงก์</small></button>
