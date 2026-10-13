@@ -8,20 +8,21 @@ self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 
 self.addEventListener('push', e => e.waitUntil(show()));
+const OPTS = { icon: 'icon-192.png', badge: 'icon-192.png', tag: 'k10-new' };
 async function show() {
-  let title = 'มีคิวจองใหม่', body = 'แตะเพื่อดูตารางคิว';
+  // 1) แสดงทันที — iPhone จะตัดการทำงานถ้าไม่แสดงแจ้งเตือนเร็ว
+  await self.registration.showNotification('มีคิวจองใหม่', Object.assign({ body: 'แตะเพื่อดูตารางคิว', renotify: true, vibrate: [200, 100, 200] }, OPTS));
+  // 2) ถ้าดึงชื่อลูกค้าได้ภายใน 5 วินาที ค่อยเปลี่ยนข้อความ (ไม่สั่นซ้ำ)
   try {
     const hit = await (await caches.open('k10')).match('sess');
     const sess = hit && await hit.text();
-    if (sess) {
-      const r = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ fn: 'barberNewest', args: [sess] }), credentials: 'omit' });
-      const n = (await r.json()).result;
-      if (n) { title = 'จองใหม่ · ' + n.name; body = dShort(n.date) + ' · ' + n.time; }
-    }
+    if (!sess) return;
+    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 5000);
+    const r = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ fn: 'barberNewest', args: [sess] }), credentials: 'omit', signal: ctl.signal });
+    clearTimeout(t);
+    const n = (await r.json()).result;
+    if (n) await self.registration.showNotification('จองใหม่ · ' + n.name, Object.assign({ body: dShort(n.date) + ' · ' + n.time, renotify: false, silent: true }, OPTS));
   } catch (err) {}
-  return self.registration.showNotification(title, {
-    body: body, icon: 'icon-192.png', badge: 'icon-192.png', tag: 'k10-new', renotify: true, vibrate: [200, 100, 200]
-  });
 }
 
 self.addEventListener('notificationclick', e => {

@@ -1178,7 +1178,7 @@ $('#app').addEventListener('click', async e => {
   if (a === 'bedit') return boostSheet(+b.dataset.i);
   if (a === 'badd') return boostSheet(-1);
   if (a === 'copy') return copyText(b.dataset.u);
-  if (a === 'pushOn' || a === 'pushOff' || a === 'pushTest') return pushAction(a, b);
+  if (a === 'pushOn' || a === 'pushOff' || a === 'pushTest' || a === 'pushTestLater') return pushAction(a, b);
   if (a === 'save') return saveSet(b);
   if (a === 'pin') return pinSheet();
   if (a === 'logout') return askConfirm('ออกจากระบบเครื่องนี้?', 'ออกจากระบบ', async () => {
@@ -1466,8 +1466,11 @@ async function renderPush() {
   const html = {
     on: `<div style="color:var(--ok);margin-bottom:10px"><i class="ti ti-circle-check"></i> เปิดอยู่บนเครื่องนี้</div>
       <div class="mu" style="margin-bottom:12px">มีลูกค้าจองใหม่ มือถือจะเด้งแจ้งเตือน แม้ปิดหน้านี้อยู่</div>
-      <div class="chips" style="grid-template-columns:1fr 1fr"><button class="chip" data-a="pushTest"><i class="ti ti-send"></i> ทดสอบ</button>
-      <button class="chip" data-a="pushOff"><i class="ti ti-bell-off"></i> ปิด</button></div>`,
+      <div class="chips" style="grid-template-columns:1fr 1fr"><button class="chip" data-a="pushTest"><i class="ti ti-send"></i> ทดสอบทันที</button>
+      <button class="chip" data-a="pushOff"><i class="ti ti-bell-off"></i> ปิด</button></div>
+      <button class="btn line" data-a="pushTestLater" style="margin-top:10px"><i class="ti ti-clock"></i> ทดสอบแบบปิดแอป (ส่งใน 10 วินาที)</button>
+      <div class="mu" style="margin-top:6px;font-size:12px">กดแล้วปัดปิดแอปหรือล็อกจอทันที ถ้าใน ~15 วินาทีมีแจ้งเตือนเด้ง แปลว่าใช้ได้ตอนปิดแอป</div>
+      <div id="pushlast" style="margin-top:14px"></div>`,
     off: `<div class="mu" style="margin-bottom:12px">ให้มือถือเด้งแจ้งเตือนเมื่อมีลูกค้าจองใหม่ แม้ปิดหน้านี้อยู่${isIOS() ? '' : ' · ระบบจะถามขออนุญาต ให้กด "อนุญาต"'}</div>
       <button class="btn" data-a="pushOn"><i class="ti ti-bell-ringing"></i> เปิดการแจ้งเตือน</button>`,
     denied: `<div class="mu">เครื่องนี้บล็อกการแจ้งเตือนของเว็บนี้ไว้ เปิดได้ที่ ⋮ → การตั้งค่า → การตั้งค่าเว็บไซต์ → การแจ้งเตือน แล้วกลับมาหน้านี้</div>`,
@@ -1475,6 +1478,21 @@ async function renderPush() {
     unsupported: `<div class="mu">เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน ลองเปิดด้วย Chrome</div>`
   }[st];
   box.innerHTML = html;
+  if (st === 'on') renderPushLast();
+}
+// ผลการส่งครั้งล่าสุด (ไว้ตรวจว่า Apple/Google รับหรือปฏิเสธ)
+async function renderPushLast() {
+  const box = $('#pushlast'); if (!box) return;
+  const x = await api('barberPushStatus').catch(() => null);
+  if (!x || !$('#pushlast')) return;
+  const sub = await pushSub().catch(() => null), mine = sub && sub.endpoint;
+  const svc = h => /apple/.test(h) ? 'iPhone/iPad' : /google|fcm/.test(h) ? 'Android/Chrome' : /mozilla/.test(h) ? 'Firefox' : h;
+  box.innerHTML = `<div class="mu" style="margin-bottom:6px"><i class="ti ti-devices"></i> เครื่องที่เปิดไว้ ${x.devices.length} เครื่อง</div>
+    ${x.devices.map(dv => `<div class="row" style="padding:7px 0;font-size:13px"><span style="flex:1">${esc(svc(dv.host))}${dv.endpoint === mine ? ' <span class="au">(เครื่องนี้)</span>' : ''}</span><span class="mu">${esc(String(dv.at).slice(0, 10))}</span></div>`).join('')}
+    ${x.last ? `<div class="mu" style="margin:12px 0 6px"><i class="ti ti-history"></i> ส่งล่าสุด ${esc(x.last.at.slice(5, 16))}</div>
+      ${x.last.results.map(rs => `<div class="row" style="padding:7px 0;font-size:13px;align-items:flex-start">
+        <span style="flex:1">${esc(svc(rs.host))}${rs.body ? `<span class="mu" style="display:block;word-break:break-all">${esc(rs.body)}</span>` : ''}</span>
+        <span style="color:${rs.code < 300 ? 'var(--ok)' : 'var(--warn)'}">${rs.code < 300 ? 'ส่งถึงแล้ว' : 'ไม่สำเร็จ'} · ${rs.code}</span></div>`).join('')}` : ''}`;
 }
 async function pushAction(a, b) {
   b.classList.add('busy');
@@ -1497,6 +1515,10 @@ async function pushAction(a, b) {
     if (a === 'pushTest') {
       const r = await api('barberPushTest');
       toast(r.total ? `ส่งแล้ว ${r.sent}/${r.total} เครื่อง · รอสักครู่` : 'ยังไม่มีเครื่องที่เปิดการแจ้งเตือน');
+    }
+    if (a === 'pushTestLater') {
+      toast('จะส่งใน 10 วินาที · ปิดแอปหรือล็อกจอได้เลย');
+      await api('barberPushTest', 10).catch(() => {});
     }
   } catch (e) {
     toast('ทำไม่สำเร็จ · ' + (e && e.message || e));
