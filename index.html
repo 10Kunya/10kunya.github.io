@@ -234,6 +234,66 @@ details.fold[open] > summary .ti-chevron-down{transform:rotate(180deg)}
 .bsel{background:transparent;border:0;border-bottom:1px solid var(--line2);outline:0;font-family:var(--serif);font-variant-numeric:lining-nums;font-size:16px;color:var(--gold);padding:2px}
 .bsel option{background:var(--card);color:var(--text)}
 .ed small{color:var(--mute);font-size:11px;white-space:nowrap}
+/* หน้าสรุป */
+.rsel{position:relative;display:inline-flex;align-items:center;border:1px solid var(--gold-line);border-radius:10px;color:var(--gold)}
+.rsel select{appearance:none;-webkit-appearance:none;background:transparent;border:0;outline:0;color:var(--gold);font-size:17px;padding:7px 34px 7px 14px}
+.rsel select option{background:var(--card);color:var(--text)}
+.rsel i{position:absolute;right:11px;pointer-events:none}
+.kgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.k{border:1px solid var(--line2);border-radius:12px;padding:9px 11px;min-width:0}
+.k .mu{font-size:13px;white-space:nowrap}
+.k b{display:block;font-family:var(--serif);font-variant-numeric:lining-nums;font-weight:500;font-size:27px;color:var(--gold);line-height:1.15;white-space:nowrap}
+.k small{font-size:12px;white-space:nowrap}
+.k .up{color:var(--ok)}.k .dn{color:var(--warn)}
+.hm{display:grid;gap:3px;font-size:12px;color:var(--mute);align-items:center;text-align:center}
+.hm i{display:block;aspect-ratio:1;border-radius:4px;font-style:normal;cursor:pointer}
+.hm .dl{text-align:left}
+.bars{display:flex;align-items:flex-end;gap:5px;height:130px}
+.bars span{flex:1;border-radius:4px 4px 0 0;background:var(--gold);min-height:2px;position:relative}
+.bars span b{position:absolute;top:-19px;left:0;right:0;text-align:center;font-weight:400;font-size:12px;color:var(--mute)}
+body.tab-p .sum{max-width:680px;margin:0 auto}
+body.tab-p .k b{font-size:34px}
+body.tab-l .sum{display:grid;grid-template-columns:minmax(300px,1fr) 1.3fr;gap:36px;align-items:start}
+body.tab-l .sum > div + div{margin-top:0 !important}
+body.tab-l .k b{font-size:34px}
+/* หน้าตั้งค่า: ตัวใหญ่ อ่านง่าย */
+.set{font-size:18px}
+.set .mu{font-size:15px !important}
+.set .row{padding:15px 0}
+.set .row > i{font-size:22px}
+.set select{font-size:22px}
+.set .stp button{width:40px;height:40px;font-size:18px}
+.set .stp b{font-size:22px;min-width:36px}
+.set .step button{width:40px;height:40px;font-size:18px}
+.set .menu-it{font-size:19px;padding:15px 0}
+.set .mic{width:46px;height:46px;font-size:23px}
+.set .ed input{font-size:18px}
+.set .ed small{font-size:13px}
+.set .ed.tier{flex-wrap:wrap;row-gap:10px}
+.set .ed.tier > span:first-child{order:-3}
+.set .ed.tier input[data-f=name]{order:-2;flex:1 1 calc(100% - 90px) !important}
+.set .ed.tier .x{order:-1}
+.set .field input{font-size:18px}
+.set .field i{font-size:21px}
+.set .chip{font-size:17px}
+.set .btn{font-size:18px;padding:16px}
+.set .hol{font-size:16px}
+.set .man ul{font-size:16px}
+.set .man h4{font-size:18px}
+.set .act{font-size:18px}
+.set .act i{font-size:22px}
+.set .brand{font-size:26px}
+/* หน้าต่างเพิ่มคิว / ให้แต้ม: ตัวใหญ่ */
+.big h3{font-size:23px}
+.big .mu{font-size:16px}
+.big .chip{font-size:19px;padding:12px 0}
+.big .chip small{font-size:14px}
+.big .chips.sv .chip{font-size:21px !important}
+.big .field input{font-size:19px;padding:12px 0}
+.big .field i{font-size:21px}
+.big .err{font-size:15px}
+.big .btn{font-size:19px;padding:16px}
+.big .link{font-size:16px}
 .ed:focus-within{border-color:var(--gold-line)}
 </style>
 </head>
@@ -243,7 +303,7 @@ details.fold[open] > summary .ti-chevron-down{transform:rotate(180deg)}
   <button data-v="list" aria-label="คิว"><i class="ti ti-list"></i></button>
   <button data-v="add" aria-label="เพิ่มคิว"><i class="ti ti-plus"></i></button>
   <button data-v="mem" aria-label="สมาชิก"><i class="ti ti-users"></i></button>
-  <button data-v="share" aria-label="ลิงก์ลูกค้า"><i class="ti ti-share"></i></button>
+  <button data-v="sum" aria-label="สรุป"><i class="ti ti-chart-bar"></i></button>
   <button data-v="set" aria-label="ตั้งค่า"><i class="ti ti-adjustments-horizontal"></i></button>
 </div></div>
 <script>
@@ -855,6 +915,7 @@ async function addSheet(time, date) {
     }
     if (a === 'block') act({ action: 'block', date: day.date, time: st.pick }, 'ปิดช่วง ' + st.pick);
   });
+  sh.classList.add('big');
   draw();
 }
 
@@ -983,7 +1044,7 @@ function renderSettings() {
     const pg = B.setPage = B.setPage || 'shop';
     const [icon, title] = SET_PAGES[pg];
     $('#app').innerHTML = `<div class="md">
-      <div><div class="head"><span class="sv brand">ตั้งค่า</span></div>${menuHtml(s, pg)}</div>
+      <div class="set"><div class="head"><span class="sv brand">ตั้งค่า</span></div>${menuHtml(s, pg)}</div>
       <div class="md-r set"><div class="head"><span class="sv brand"><i class="ti ${icon} au" style="font-size:19px"></i> ${title}</span></div>${pageBody(pg, s)}</div></div>`;
     fillPushSum(); afterPage(pg, s);
     return;
@@ -1018,14 +1079,14 @@ const PAGE_BODY = {
     <div class="row"><i class="ti ti-clock-hour-4"></i><span>คิวละ</span>
       <select id="ss">${slots.sort((a, b) => a - b).map(n => `<option value="${n}" ${n === s.slotMin ? 'selected' : ''}>${n} นาที</option>`).join('')}</select></div>
     <div class="row"><i class="ti ti-calendar-event"></i><span>จองล่วงหน้า</span>
-      <span class="step" style="flex:none"><button data-a="adv-">−</button><span class="sv au" style="font-size:19px;min-width:48px;text-align:center">${s.advanceDays} วัน</span><button data-a="adv+">+</button></span></div>
+      <span class="step" style="flex:none"><button data-a="adv-">−</button><span class="sv au" style="font-size:22px;min-width:56px;text-align:center">${s.advanceDays} วัน</span><button data-a="adv+">+</button></span></div>
     <div class="mu" style="padding:16px 0 8px"><i class="ti ti-calendar-off"></i> วันหยุดประจำ</div>
     <div class="chips" style="grid-template-columns:repeat(7,1fr);font-size:13px">
       ${[1, 2, 3, 4, 5, 6, 0].map(n => `<button class="chip ${s.closedDays.indexOf(n) >= 0 ? 'on' : ''}" data-a="wd" data-n="${n}">${WD[n].replace('.', '')}</button>`).join('')}
     </div>
     <div class="mu" style="padding:18px 0 8px"><i class="ti ti-beach"></i> หยุดพิเศษ</div>
     <div>${s.holidays.map(h => `<span class="hol">${dShort(h)}<button data-a="hdel" data-h="${h}" aria-label="ลบ"><i class="ti ti-x"></i></button></span>`).join('')}</div>
-    <div class="row" style="border:0;padding-top:4px"><i class="ti ti-plus mu"></i><input type="date" id="sh" min="${new Date().toISOString().slice(0, 10)}" style="flex:1;text-align:left;font-family:var(--sans);font-size:16px;color:var(--text)"></div>
+    <div class="row" style="border:0;padding-top:4px"><i class="ti ti-plus mu"></i><input type="date" id="sh" min="${new Date().toISOString().slice(0, 10)}" style="flex:1;text-align:left;font-family:var(--sans);font-size:18px;color:var(--text)"></div>
     <div class="mu" style="padding:14px 0 0"><i class="ti ti-ticket"></i> แสดงบนตั๋วลูกค้า</div>
     <div class="field"><i class="ti ti-phone"></i><input id="sp" placeholder="เบอร์ร้าน" inputmode="tel" value="${esc(s.phone)}"></div>
     <div class="field"><i class="ti ti-map-pin"></i><input id="sm" placeholder="ลิงก์ Google Maps ของร้าน" value="${esc(s.mapUrl)}"></div>`;
@@ -1200,6 +1261,99 @@ async function pinSheet() {
     if (!r || !r.ok) { oldPin = newPin = ''; return pad.reset('PIN เดิม', r ? r.msg : 'เชื่อมต่อไม่สำเร็จ'); }
     closeSheet(); toast('เปลี่ยน PIN แล้ว');
   }, () => !oldPin ? st.pinLen : newPin ? newPin.length : 0);
+}
+
+/*** ---------- สรุป ---------- ***/
+const RANGES = [['d1', '1 วัน'], ['w1', '1 สัปดาห์'], ['m1', '1 เดือน'], ['m6', '6 เดือน'], ['y1', '1 ปี'], ['y3', '3 ปี'], ['y5', '5 ปี']];
+// ตัวเลขย่อ: 1,250 → 1.2K · 2,400,000 → 2.4M
+const r1 = x => String(Math.round(x * 10) / 10);
+const compact = n => n >= 1e6 ? r1(n / 1e6) + 'M' : n >= 1000 ? r1(n / 1000) + 'K' : String(n);
+const thDate = ds => { const [y, m, d] = ymd(ds); return d + ' ' + MO[m - 1] + ' ' + String(y + 543).slice(-2); };
+
+async function showSummary(range) {
+  B.view = 'sum'; navOn('sum');
+  B.sumRange = range || B.sumRange || store.get('k10_range', 'm1');
+  store.set('k10_range', B.sumRange);
+  if (!B.sum || B.sum.range !== B.sumRange) $('#app').innerHTML = '<div class="load"><i class="ti ti-scissors"></i></div>';
+  else renderSummary();
+  let d;
+  try { d = await api('barberSummary', B.sumRange); } catch (e) { return; }
+  if (B.view !== 'sum' || d.range !== B.sumRange) return;
+  B.sum = d;
+  renderSummary();
+}
+
+function renderSummary() {
+  const d = B.sum, c = d.cur, p = d.prev;
+  const label = RANGES.find(x => x[0] === d.range)[1];
+  // ▲▼ เทียบช่วงก่อนหน้า (pct = เป็นเปอร์เซ็นต์ · money = เป็นบาท)
+  const dl = (k, pct, money) => {
+    if (!p) return '';
+    const diff = c[k] - p[k];
+    if (Math.abs(diff) < 0.05) return '<small class="mu">เท่าเดิม</small>';
+    const v = pct ? (p[k] ? Math.round(Math.abs(diff) / p[k] * 100) + '%' : '') : (money ? '฿' + compact(Math.abs(diff)) : r1(Math.abs(diff)));
+    return v ? `<small class="${diff > 0 ? 'up' : 'dn'}">${diff > 0 ? '▲' : '▼'} ${v}</small>` : '';
+  };
+  const k = (lab, val, sub) => `<div class="k"><span class="mu">${lab}</span><b>${val}</b>${sub || '<small>&nbsp;</small>'}</div>`;
+  const money = c.priced || (p && p.priced);
+  const cards = [
+    money ? k('รายได้', '฿' + compact(c.revenue), dl('revenue', true)) : '',
+    money ? k('เฉลี่ย/หัว', '฿' + compact(c.perHead), dl('perHead', false, true)) : '',
+    k('ลูกค้า', compact(c.customers), dl('customers', true)),
+    d.range === 'd1' ? '' : k('เฉลี่ย/วัน', r1(c.avg), dl('avg')),
+    k('ลูกค้าใหม่', compact(c.newC), dl('newC')),
+    k('ไม่มา', compact(c.noshow), `<small class="mu">${c.noshowPct}%</small>`),
+    k('ยกเลิก', compact(c.cancelled), `<small class="mu">${c.cancelPct}%</small>`),
+    k('จองออนไลน์', c.customers ? c.online + '%' : '–', c.customers ? `<small class="mu">walk-in ${100 - c.online}%</small>` : '')
+  ].join('');
+  const period = d.range === 'd1' ? 'วันนี้ ' + thDate(d.to) : thDate(d.from) + ' – ' + thDate(d.to);
+  const left = `<div>
+    <div class="head" style="margin-bottom:8px;align-items:center"><span class="sv brand">สรุป</span>
+      <span class="rsel"><select id="rg" aria-label="ช่วงเวลา">${RANGES.map(([v, l]) => `<option value="${v}" ${v === d.range ? 'selected' : ''}>${l}</option>`).join('')}</select><i class="ti ti-chevron-down"></i></span></div>
+    <div class="mu" style="margin-bottom:12px">${period}${p ? ' · เทียบ ' + label + 'ก่อนหน้า' : ''}</div>
+    <div class="kgrid">${cards}</div>
+    ${money ? '' : '<div class="mu" style="margin-top:10px;font-size:12px"><i class="ti ti-info-circle"></i> รายได้จะขึ้นเมื่อเริ่มบันทึกราคาตอนกดเสร็จ</div>'}</div>`;
+  $('#app').className = 'wrap';
+  $('#app').innerHTML = `<div class="sum">${left}<div style="margin-top:22px">${d.range === 'd1' ? barsHtml(d) : heatHtml(d)}</div></div>`;
+  $('#rg').onchange = e => showSummary(e.target.value);
+  $('#app').querySelectorAll('[data-hm]').forEach(el => { el.onclick = () => toast(el.dataset.hm); });
+}
+
+// วันนี้: แท่งรายชั่วโมง
+function barsHtml(d) {
+  const v = d.today, max = Math.max(1, ...v);
+  if (!v.some(Boolean)) return '<div class="mu" style="text-align:center;padding:40px 0">วันนี้ยังไม่มีคิวที่ตัดเสร็จ</div>';
+  return `<div class="mu" style="margin-bottom:26px"><i class="ti ti-clock"></i> ลูกค้าแต่ละชั่วโมง</div>
+    <div class="bars">${v.map(n => `<span style="height:${n / max * 100}%;opacity:${n ? (.35 + .65 * n / max).toFixed(2) : .25}">${n ? `<b>${n}</b>` : ''}</span>`).join('')}</div>
+    <div style="display:flex;gap:5px;margin-top:4px">${d.hours.map(h => `<span class="mu" style="flex:1;text-align:center;font-size:12px">${h}</span>`).join('')}</div>`;
+}
+
+// วัน × ชั่วโมง
+function heatHtml(d) {
+  const H = d.hours, order = [1, 2, 3, 4, 5, 6, 0];
+  const max = Math.max(0, ...d.heat.map(r => Math.max(...r)));
+  if (!max) return '<div class="mu" style="text-align:center;padding:40px 0">ยังไม่มีคิวที่ตัดเสร็จในช่วงนี้</div>';
+  // ช่วง 2 ชั่วโมงที่คนเยอะสุด / เงียบสุด (เฉพาะวันที่ร้านเปิด)
+  let hi = null, lo = null;
+  order.filter(w => d.closedDays.indexOf(w) < 0).forEach(w => {
+    for (let i = 0; i + 1 < H.length; i++) {
+      const n = d.heat[w][i] + d.heat[w][i + 1];
+      if (!hi || n > hi.n) hi = { w, i, n };
+      if (!lo || n < lo.n) lo = { w, i, n };
+    }
+  });
+  const span = x => `${WD[x.w].replace('.', '')} ${H[x.i]}:00–${H[x.i] + 2}:00`;
+  const cell = (w, i) => {
+    const n = d.heat[w][i], a = n ? .14 + .86 * n / max : 0;
+    return `<i data-hm="${WD_FULL[w]} ${H[i]}:00–${H[i] + 1}:00 · ${n} คน" style="background:${n ? `rgba(201,166,107,${a.toFixed(2)})` : 'var(--line)'}"></i>`;
+  };
+  return `${hi ? `<div class="mu" style="margin-bottom:10px"><i class="ti ti-flame"></i> คนเยอะสุด <span class="au">${span(hi)}</span>${lo && lo.n < hi.n ? ` · เงียบสุด <span style="color:var(--text)">${span(lo)}</span>` : ''}</div>` : ''}
+    <div class="hm" style="grid-template-columns:26px repeat(${H.length},1fr)">
+      <span></span>${H.map(h => `<span>${h}</span>`).join('')}
+      ${order.map(w => `<span class="dl" style="${d.closedDays.indexOf(w) >= 0 ? 'opacity:.4' : ''}">${WD[w].replace('.', '')}</span>${H.map((h, i) => cell(w, i)).join('')}`).join('')}
+    </div>
+    <div class="mu" style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px">น้อย
+      <span style="flex:1;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--line),var(--gold))"></span>มาก (${max} คน) · แตะช่องดูจำนวน</div>`;
 }
 
 /*** ---------- สมาชิก ---------- ***/
@@ -1391,6 +1545,7 @@ async function doneFlow(id) {
         act({ action: 'done', id: id, phone: p, name: $('#gn', sh).value }, 'เสร็จแล้ว');
       }
     });
+  sh.classList.add('big');
 }
 
 // ข้อความฉลองตอนลูกค้าขึ้นระดับ
@@ -1570,9 +1725,14 @@ const MANUAL = `
     <li>เดือนเกิด: ลูกค้าเลือกเดือนเกิดในบัตรสมาชิก มาตัดครั้งแรกของเดือนนั้นได้โบนัส (ปีละครั้ง)</li>
     <li>ชวนเพื่อน: ลูกค้าใหม่ใส่เบอร์ผู้ชวนตอนจอง พอมาตัดครั้งแรกเสร็จ ได้แต้มทั้งคู่</li>
   </ul>
-  <h4><i class="ti ti-share"></i> แชร์ให้ลูกค้า</h4>
+  <h4><i class="ti ti-chart-bar"></i> สรุป</h4>
   <ul>
-    <li>ปุ่มแชร์ = คัดลอกลิงก์จองคิว · QR อยู่บนสุดของหน้านี้ กดค้างที่รูปเพื่อบันทึก</li>
+    <li>เลือกช่วงจากปุ่มมุมขวาบน: 1 วัน ถึง 5 ปี (นับย้อนจากวันนี้) ลูกศร ▲▼ = เทียบกับช่วงยาวเท่ากันก่อนหน้า</li>
+    <li>นับเฉพาะคิวที่กด "เสร็จ" · ตาราง = จำนวนลูกค้าตามวันและชั่วโมง สีทองเข้ม = คนเยอะ แตะช่องเพื่อดูตัวเลข</li>
+  </ul>
+  <h4><i class="ti ti-qrcode"></i> แชร์ให้ลูกค้า</h4>
+  <ul>
+    <li>ตั้งค่า → "QR และลิงก์ร้าน" · คัดลอกลิงก์จองคิว หรือบันทึกรูป QR ไปปริ้นแปะหน้าร้าน</li>
   </ul>
   <h4><i class="ti ti-adjustments-horizontal"></i> ตั้งค่า</h4>
   <ul>
@@ -1591,7 +1751,7 @@ const NAV_TIPS = {
   list: ['คิว', 'ดูตารางคิวทั้งวัน กดค้างที่คิวเพื่อลากย้าย'],
   add: ['เพิ่มคิว', 'ลงคิว walk-in / ลูกค้าประจำ หรือปิดช่วงไม่รับคิว'],
   mem: ['สมาชิก', 'ดูแต้ม แลกรางวัล ปรับแต้ม'],
-  share: ['ลิงก์ลูกค้า', 'คัดลอกลิงก์จองคิวไปส่งให้ลูกค้า'],
+  sum: ['สรุป', 'จำนวนลูกค้า รายได้ และช่วงเวลาที่คนเยอะ'],
   set: ['ตั้งค่า', 'เวลาเปิดปิด วันหยุด แต้ม รางวัล QR และคู่มือ']
 };
 (function bindNavTips() {
@@ -1645,6 +1805,7 @@ addEventListener('resize', () => {
     if (B.view === 'list' && B.d) renderList();
     else if (B.view === 'set' && B.set) renderSettings();
     else if (B.view === 'mem') showMembers($('#mq') ? $('#mq').value : '');
+    else if (B.view === 'sum' && B.sum) renderSummary();
   }, 150);
 });
 
@@ -1669,9 +1830,7 @@ $('#nav').addEventListener('click', async e => {
   if (v === 'set') return showSettings('');
   if (v === 'mem') return showMembers();
   if (v === 'add') { if (B.view !== 'list') { B.view = 'list'; renderList(); } return addSheet(''); }
-  if (v === 'share') {
-    copyText(CUSTOMER_URL);
-  }
+  if (v === 'sum') return showSummary();
 });
 
 boot();
