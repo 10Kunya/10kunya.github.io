@@ -159,9 +159,6 @@ a{color:inherit;text-decoration:none}
 .help ul{margin:0;padding-left:18px;line-height:1.7;font-size:14px}
 .shopnote{border:1px solid var(--gold-line);background:var(--gold-bg);border-radius:12px;padding:11px 14px;display:flex;gap:10px;align-items:flex-start;margin-bottom:18px;line-height:1.55;white-space:pre-line;word-break:break-word}
 .shopnote .ti{color:var(--gold);font-size:20px;margin-top:1px}
-#notebox textarea{width:100%;background:transparent;border:1px solid var(--line2);border-radius:10px;outline:0;padding:10px 12px;font-size:16px;line-height:1.5;resize:none;margin-top:8px}
-#notebox textarea:focus{border-color:var(--gold-line)}
-#notebox textarea::placeholder{color:var(--dim)}
 .wa{position:absolute;top:50%;transform:translateY(-50%);width:38px;height:38px;border-radius:50%;background:var(--bg);border:1px solid var(--line2);color:var(--mute);font-size:18px;display:flex;align-items:center;justify-content:center;z-index:1}
 .wa:active{color:var(--gold);border-color:var(--gold-line)}
 .wa.l{left:10px}.wa.r{right:10px}
@@ -403,6 +400,9 @@ async function load(except) {
 }
 
 // ประกาศจากร้าน (ช่างตั้งในหน้าตั้งค่า)
+function noteField() {
+  return `<div class="field" id="notebox"><i class="ti ti-message"></i><input id="nt" maxlength="100" placeholder="ฝากข้อความถึงช่าง (ไม่ใส่ก็ได้)" value="${esc(S.resched ? S.resched.note || '' : '')}"></div>`;
+}
 function shopNoteHtml() {
   return S.d.notice ? `<div class="shopnote"><i class="ti ti-speakerphone"></i><span>${esc(S.d.notice)}</span></div>` : '';
 }
@@ -470,12 +470,11 @@ function showBook(resched, forOther) {
       <button class="wa r" data-step="1" aria-label="เวลาถัดไป"><i class="ti ti-chevron-right"></i></button></div>
     <div class="msg" id="msg"></div>
     <div class="chips sv" id="sugs" style="grid-template-columns:repeat(3,1fr);margin-bottom:22px"></div>
-    ${S.resched ? '' : `<div id="who"></div>
+    ${S.resched ? noteField() : `<div id="who"></div>${noteField()}
     ${d.referralBonus ? `<details id="refbox" style="margin-top:10px"><summary class="mu" style="cursor:pointer;list-style:none"><i class="ti ti-users-plus"></i> มีเพื่อนแนะนำ? (ลูกค้าใหม่ · ได้คนละ ${d.referralBonus || 0} แต้ม)</summary>
       <div class="field"><i class="ti ti-phone"></i><input id="rf" placeholder="เบอร์ของเพื่อนที่แนะนำ" inputmode="tel" maxlength="12"></div>
       <div class="err" id="erf"></div></details>` : ''}`}
-    <details id="notebox" style="margin-top:10px" ${S.resched && S.resched.note ? 'open' : ''}><summary class="mu" style="cursor:pointer;list-style:none"><i class="ti ti-message-plus"></i> ฝากข้อความถึงช่าง (ไม่ใส่ก็ได้)</summary>
-      <textarea id="nt" rows="2" maxlength="100" placeholder="เช่น ขอรองทรงต่ำ / อาจมาสาย 10 นาที">${esc(S.resched ? S.resched.note || '' : '')}</textarea></details>
+
     <div class="err" id="ego" style="margin-top:14px"></div>
     <button class="btn" id="go" style="margin-top:18px"></button>
     ${S.resched ? '' : '<div class="mu" style="text-align:center;margin-top:10px;font-size:12px"><i class="ti ti-shield-lock"></i> ร้านเก็บชื่อและเบอร์ไว้เพื่อจองคิวและสะสมแต้มเท่านั้น</div>'}
@@ -772,7 +771,7 @@ function helpSheet() {
     <ul><li>เลือกวัน แล้วเลื่อนวงล้อ (หรือกด ‹ ›) ไปเวลาที่อยากมา</li>
       <li>ถ้าเวลานั้นมีคิวแล้ว จะมีเวลาใกล้ที่สุดที่ว่างให้แตะเลือก</li>
       <li>ใส่ชื่อและเบอร์โทร (ครั้งแรกครั้งเดียว เครื่องนี้จำไว้ให้) แล้วกด "จองเวลา"</li>
-      <li>มีอะไรอยากบอกช่าง แตะ "ฝากข้อความถึงช่าง" ก่อนกดจอง</li>
+      <li>มีอะไรอยากบอกช่าง พิมพ์ในช่อง "ฝากข้อความถึงช่าง" ใต้เบอร์โทร (ไม่ใส่ก็ได้)</li>
       <li>จองให้คนอื่น: หลังจองเสร็จกด "จองคิวให้อีกคน"</li></ul>
     <h4><i class="ti ti-ticket"></i> ตั๋วคิว</h4>
     <ul><li>เปิดหน้านี้อีกครั้งก็เห็นตั๋วเดิม · กด "เก็บลิงก์" ไว้เปิดจากเครื่องอื่น</li>
