@@ -212,6 +212,20 @@ body.tab-l .row.sel{background:var(--gold-bg);border-radius:10px;padding-left:10
 .cell.k-xcancel .n{text-decoration:line-through;color:var(--c-noshow);opacity:.75}
 .dnav{display:flex;align-items:center;gap:4px}
 .dnav button{color:var(--mute);font-size:20px;padding:8px 8px;min-height:40px}
+.dnav .dpick{border:1px solid var(--gold-line);border-radius:10px;padding:5px 11px;min-height:38px;font-size:16px;color:var(--gold);white-space:nowrap}
+.dnav .dpick .ti{font-size:16px;margin-right:3px}
+.dnav .back{font-size:13px;padding:6px 4px;color:var(--mute)}
+.calg{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;text-align:center}
+.calg .h{font-size:13px;color:var(--mute);padding:4px 0}
+.calg button{border-radius:10px;padding:7px 0 4px;font-family:var(--serif);font-variant-numeric:lining-nums;font-size:20px;line-height:1.1;border:1px solid transparent}
+.calg button small{display:block;font-family:var(--sans);font-size:11px;color:var(--gold);height:14px}
+.calg .past{opacity:.55}
+.calg .off{color:var(--dim)}
+.calg .hol{color:var(--c-noshow)}
+.calg .hol small{color:var(--c-noshow)}
+.calg .today{border-color:var(--gold)}
+.calg .sel{background:var(--gold);color:var(--bg);opacity:1}
+.calg .sel small{color:var(--bg)}
 details.fold > summary{padding:12px 0;cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px}
 details.fold > summary::-webkit-details-marker{display:none}
 details.fold[open] > summary .ti-chevron-down{transform:rotate(180deg)}
@@ -644,6 +658,43 @@ async function loadDay(date) {
   if (B.view === 'list') renderList();
 }
 
+// ปฏิทินเลือกวัน (แตะวันที่บนหน้าคิว) — ตัวเลขทอง = จำนวนคิววันนั้น
+function calSheet() {
+  const d = B.d;
+  let ym = d.date.slice(0, 7), counts = {};
+  const draw = () => {
+    const [y, m] = ym.split('-').map(Number), first = new Date(Date.UTC(y, m - 1, 1)).getUTCDay(), n = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    const cells = Array.from({ length: (first + 6) % 7 }, () => '<span></span>');   // เริ่มสัปดาห์วันจันทร์
+    for (let i = 1; i <= n; i++) {
+      const ds = ym + '-' + String(i).padStart(2, '0'), hol = d.holidays.indexOf(ds) >= 0, off = d.closedDays.indexOf(wday(ds)) >= 0;
+      const cls = [ds < d.today ? 'past' : '', off ? 'off' : '', hol ? 'hol' : '', ds === d.today ? 'today' : '', ds === d.date ? 'sel' : ''].join(' ');
+      cells.push(`<button class="${cls}" data-a="go" data-d="${ds}">${i}<small>${hol ? 'หยุด' : counts[ds] || ''}</small></button>`);
+    }
+    return `<div style="display:flex;justify-content:space-between;align-items:center;margin:0 36px 10px 0">
+        <button data-a="pm" class="mu" style="font-size:24px;padding:4px 12px" aria-label="เดือนก่อน"><i class="ti ti-chevron-left"></i></button>
+        <span style="font-size:19px">${MO_FULL[m - 1]} ${y + 543}</span>
+        <button data-a="nm" class="mu" style="font-size:24px;padding:4px 12px" aria-label="เดือนถัดไป"><i class="ti ti-chevron-right"></i></button></div>
+      <div class="calg">${['จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส', 'อา'].map(x => `<span class="h">${x}</span>`).join('')}${cells.join('')}</div>
+      <div class="mu" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:12px"><span><span class="au">ตัวเลขทอง</span> = จำนวนคิว</span><span style="color:var(--dim)">วันหยุดประจำ</span><span style="color:var(--c-noshow)">หยุดพิเศษ</span></div>
+      <button class="btn line" data-a="go" data-d="${d.today}" style="margin-top:14px">กลับวันนี้</button>`;
+  };
+  const load = async () => {
+    const want = ym;
+    const r = await api('barberMonth', want).catch(() => null);
+    if (!r || want !== ym || !sh.isConnected) return;
+    counts = r.counts; $('.sbody', sh).innerHTML = draw();
+  };
+  const sh = openSheet(draw(), (a, b) => {
+    if (a === 'go') { closeSheet(); return loadDay(b.dataset.d).catch(() => {}); }
+    if (a === 'pm' || a === 'nm') {
+      const [y, m] = ym.split('-').map(Number), t = new Date(Date.UTC(y, m - 1 + (a === 'nm' ? 1 : -1), 1));
+      ym = t.toISOString().slice(0, 7); counts = {};
+      $('.sbody', sh).innerHTML = draw(); load();
+    }
+  });
+  load();
+}
+
 function isToday() { return B.d.date === B.d.today; }
 
 // ช่องเวลาทั้งวัน แต่ละช่องผูกกับคิวที่เริ่มในช่วงนั้น
@@ -702,8 +753,9 @@ function renderList() {
     <div class="head" style="margin-bottom:10px">
       <span class="sv brand" style="font-size:20px">๑๐ กันยา</span>
       <span class="dnav">
+        ${today ? '' : '<button data-a="today" class="back" aria-label="กลับวันนี้"><i class="ti ti-arrow-back-up"></i> วันนี้</button>'}
         <button data-a="prev" aria-label="วันก่อน"><i class="ti ti-chevron-left"></i></button>
-        <button data-a="today" style="font-size:17px;color:${today ? 'var(--gold)' : 'var(--text)'}">${today ? 'วันนี้' : dShort(d.date)}</button>
+        <button data-a="cal" class="dpick" aria-label="เลือกวันจากปฏิทิน"><i class="ti ti-calendar"></i>${today ? 'วันนี้ · ' + dShort(d.date) : dShort(d.date)}</button>
         <button data-a="next" aria-label="วันถัดไป"><i class="ti ti-chevron-right"></i></button>
       </span>
     </div>
@@ -743,6 +795,7 @@ $('#app').addEventListener('click', async e => {
   const a = b.dataset.a;
   if (a === 'prev' || a === 'next') return loadDay(addDays(B.d.date, a === 'prev' ? -1 : 1)).catch(() => {});
   if (a === 'today') return loadDay('').catch(() => {});
+  if (a === 'cal') return calSheet();
   if (a === 'done') return doneFlow(b.dataset.id);
   if (a === 'row' || a === 'cell') {
     if (b.dataset.id) {
@@ -1898,7 +1951,7 @@ const MANUAL = `
   <ul>
     <li>การ์ดบนสุด = คิวตอนนี้ (หรือคิวถัดไป) กด <i class="ti ti-check"></i> เมื่อตัดเสร็จ ลูกค้าได้แต้มอัตโนมัติ</li>
     <li>ด้านขวาของการ์ด: <i class="ti ti-users"></i> ทั้งหมด · <i class="ti ti-check"></i> เสร็จ · <i class="ti ti-hourglass"></i> รอ</li>
-    <li>แตะ <i class="ti ti-chevron-left"></i> <i class="ti ti-chevron-right"></i> เพื่อดูวันอื่น แตะชื่อวันเพื่อกลับวันนี้</li>
+    <li>แตะ <i class="ti ti-chevron-left"></i> <i class="ti ti-chevron-right"></i> เพื่อดูวันอื่น · แตะ <i class="ti ti-calendar"></i> วันที่ = ปฏิทินทั้งเดือน (ตัวเลขทอง = จำนวนคิว) · <i class="ti ti-arrow-back-up"></i> วันนี้ = กลับวันนี้</li>
     <li>แตะช่องที่มีคิว = เมนู (เสร็จ / ไม่มา / เลื่อนวัน / ยกเลิก / โทร)</li>
     <li>แตะช่องว่าง = เพิ่มคิวเวลานั้น หรือปิดช่วงไม่รับคิว</li>
     <li><b>กดค้างที่คิว</b> แล้วลากไปช่องว่าง = ย้ายเวลา (มีถามยืนยันก่อน)</li>
