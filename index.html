@@ -550,7 +550,10 @@ async function ensureLogo(ver, shape) {
     if (r && r.data) { LOGO.ver = r.ver; LOGO.data = r.data; store.set('k10_logo', { ver: r.ver, data: r.data }); }
   } catch (e) {}
 }
-const logoTag = (px, extra) => LOGO.data ? `<img class="shoplogo" src="${LOGO.data}" alt="" style="width:${px}px;height:${px}px;border-radius:${LOGO.shape === 'square' ? Math.round(px * .22) + 'px' : '50%'};object-fit:cover;flex-shrink:0;${extra || ''}">` : '';
+// ยังไม่ตั้งโลโก้ → ใช้ "๑๐" แบบเดียวกับไอคอนแอป
+const DEF_LOGO = (location.pathname.indexOf('/book/') >= 0 ? '../' : '') + 'icon-512.png?v=2';
+const logoSrc = () => LOGO.data || DEF_LOGO;
+const logoTag = (px, extra) => logoSrc() ? `<img class="shoplogo" src="${logoSrc()}" alt="" style="width:${px}px;height:${px}px;border-radius:${LOGO.shape === 'square' ? Math.round(px * .22) + 'px' : '50%'};object-fit:cover;flex-shrink:0;${extra || ''}">` : '';
 
 // เงื่อนไขสมาชิกและรางวัล (สร้างจากค่าที่ร้านตั้งไว้)
 function termsHtml(t) {
@@ -1103,7 +1106,7 @@ async function drawQr(url) {
     const qr = qrcode(0, 'M');
     qr.addData(url); qr.make();
     let lg = null;
-    if (LOGO.data) { lg = new Image(); lg.src = LOGO.data; try { await lg.decode(); } catch (e) { lg = null; } }
+    lg = new Image(); lg.src = logoSrc(); try { await lg.decode(); } catch (e) { lg = null; }
     const top = lg ? 150 : 0;   // ที่ว่างสำหรับโลโก้
     const n = qr.getModuleCount(), W = 720, H = 960 + top, cell = Math.floor(520 / n), size = cell * n, x0 = (W - size) / 2, y0 = 210 + top;
     const c = document.createElement('canvas'); c.width = W; c.height = H;
@@ -1265,8 +1268,8 @@ const PAGE_BODY = {
     const slots = [15, 20, 30, 40, 45, 60, 90];
     if (slots.indexOf(s.slotMin) < 0) slots.push(s.slotMin);
     return `
-    <div class="row" style="gap:14px;padding-top:4px">${logoTag(72) || '<span class="lgph">โลโก้</span>'}
-      <span style="flex:1">โลโก้ร้าน<span class="mu" style="display:block">แสดงบนหน้าจอง ตั๋ว QR และหน้าใส่ PIN · บันทึกทันที</span></span></div>
+    <div class="row" style="gap:14px;padding-top:4px">${logoTag(72)}
+      <span style="flex:1">โลโก้ร้าน<span class="mu" style="display:block">${LOGO.data ? 'แสดงบนหน้าจอง ตั๋ว QR และหน้าใส่ PIN · บันทึกทันที' : 'ตอนนี้ใช้ ๑๐ แบบเดียวกับไอคอนแอป · เลือกรูปเพื่อเปลี่ยน'}</span></span></div>
     <div class="chips" style="grid-template-columns:1fr 1fr;margin:10px 0">
       <button class="chip" data-a="lgpick"><i class="ti ti-photo"></i> ${LOGO.data ? 'เปลี่ยนรูป' : 'เลือกรูป'}</button>
       ${LOGO.data ? '<button class="chip" data-a="lgdel" style="color:var(--c-noshow)"><i class="ti ti-trash"></i> ลบโลโก้</button>' : ''}
@@ -1534,7 +1537,7 @@ $('#app').addEventListener('click', async e => {
   if (a === 'hdel') { s.holidays = s.holidays.filter(h => h !== b.dataset.h); return renderSettings(); }
   if (a === 'lgpick') return $('#lgfile').click();
   if (a === 'lgshape') return saveLogo(null, b.dataset.s, false, 'เปลี่ยนรูปทรงแล้ว');
-  if (a === 'lgdel') return askConfirm('ลบโลโก้ร้าน?', 'ลบโลโก้', () => saveLogo('', 'circle', true, 'ลบโลโก้แล้ว'), 'ไม่ลบ');
+  if (a === 'lgdel') return askConfirm('ลบโลโก้ร้าน?', 'ลบโลโก้', () => saveLogo('', 'circle', true, 'ลบโลโก้แล้ว · กลับเป็น ๑๐'), 'ไม่ลบ');
   if (a === 'wtog') { const w = s.week[+b.dataset.n]; w.on = !w.on; return renderSettings(); }
   if (a === 'wsame') { const src = s.week[[1, 2, 3, 4, 5, 6, 0].find(n => s.week[n].on)]; s.week.forEach(w => { if (w.on) { w.open = src.open; w.close = src.close; } }); toast('ตั้งเวลาเดียวกันแล้ว · กดบันทึก'); return renderSettings(); }
   if (a === 'ktog') { const k = s.breaks[+b.dataset.i]; k.on = k.on === false; return renderSettings(); }
@@ -2114,7 +2117,7 @@ const MANUAL = `
   </ul>
   <h4><i class="ti ti-adjustments-horizontal"></i> ตั้งค่า</h4>
   <ul>
-    <li><b>ร้าน:</b> โลโก้ร้าน (เลือกรูป → ลากจัด/ซูม · เลือกวงกลมหรือมุมมน · บันทึกทันที) · เวลาเปิด–ปิดแยกรายวัน (สวิตช์ = เปิด/หยุดวันนั้น · ปุ่มใช้เวลาเดียวกันทุกวัน) · ช่วงพักประจำ · คิวละกี่นาที · จองล่วงหน้ากี่วัน · วันหยุดพิเศษ · เบอร์ร้าน / แผนที่</li>
+    <li><b>ร้าน:</b> โลโก้ร้าน (ยังไม่ตั้ง = ใช้ ๑๐ · เลือกรูป → ลากจัด/ซูม · เลือกวงกลมหรือมุมมน · บันทึกทันที · ลบโลโก้ = กลับเป็น ๑๐) · เวลาเปิด–ปิดแยกรายวัน (สวิตช์ = เปิด/หยุดวันนั้น · ปุ่มใช้เวลาเดียวกันทุกวัน) · ช่วงพักประจำ · คิวละกี่นาที · จองล่วงหน้ากี่วัน · วันหยุดพิเศษ · เบอร์ร้าน / แผนที่</li>
     <li>ตั้งวันหยุดทับวันที่มีคิว ระบบจะบอกจำนวนคิวที่ต้องโทรแจ้งลูกค้า</li>
     <li><b>ราคา:</b> ปุ่มราคาตอนกดเสร็จ · <b>ประกาศถึงลูกค้า:</b> ข้อความบนหน้าจอง ตั้งวันหมดได้</li>
     <li><b>สมาชิกและรางวัล:</b> ระดับ / รางวัล ใช้ปุ่ม − + · แตะไอคอนรางวัลเพื่อเปลี่ยนรูป · ข้อความเพิ่มเติมในเงื่อนไข</li>

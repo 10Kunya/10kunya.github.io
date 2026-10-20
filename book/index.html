@@ -354,7 +354,10 @@ async function ensureLogo(ver, shape) {
     if (r && r.data) { LOGO.ver = r.ver; LOGO.data = r.data; store.set('k10_logo', { ver: r.ver, data: r.data }); }
   } catch (e) {}
 }
-const logoTag = (px, extra) => LOGO.data ? `<img class="shoplogo" src="${LOGO.data}" alt="" style="width:${px}px;height:${px}px;border-radius:${LOGO.shape === 'square' ? Math.round(px * .22) + 'px' : '50%'};object-fit:cover;flex-shrink:0;${extra || ''}">` : '';
+// ยังไม่ตั้งโลโก้ → ใช้ "๑๐" แบบเดียวกับไอคอนแอป
+const DEF_LOGO = (location.pathname.indexOf('/book/') >= 0 ? '../' : '') + 'icon-512.png?v=2';
+const logoSrc = () => LOGO.data || DEF_LOGO;
+const logoTag = (px, extra) => logoSrc() ? `<img class="shoplogo" src="${logoSrc()}" alt="" style="width:${px}px;height:${px}px;border-radius:${LOGO.shape === 'square' ? Math.round(px * .22) + 'px' : '50%'};object-fit:cover;flex-shrink:0;${extra || ''}">` : '';
 
 // เงื่อนไขสมาชิกและรางวัล (สร้างจากค่าที่ร้านตั้งไว้)
 function termsHtml(t) {
