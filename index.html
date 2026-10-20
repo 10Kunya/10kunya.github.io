@@ -205,6 +205,11 @@ body.tab-l .row.sel{background:var(--gold-bg);border-radius:10px;padding-left:10
 .newbk{position:fixed;left:12px;right:12px;top:calc(10px + env(safe-area-inset-top));z-index:35;display:flex;align-items:center;gap:12px;text-align:left;
   background:var(--gold);color:var(--bg);border-radius:14px;padding:12px 16px;font-size:16px;line-height:1.4;max-width:420px;margin:0 auto;animation:up .2s ease-out}
 .newbk > .ti:first-child{font-size:26px}
+.newbk.k-move{background:var(--c-move)}
+.newbk.k-cancel{background:var(--c-noshow)}
+.newbk.k-edit{background:var(--c-note)}
+.cell.k-xcancel{border:1px dashed var(--c-noshow);color:var(--mute)}
+.cell.k-xcancel .n{text-decoration:line-through;color:var(--c-noshow);opacity:.75}
 .dnav{display:flex;align-items:center;gap:4px}
 .dnav button{color:var(--mute);font-size:20px;padding:8px 8px;min-height:40px}
 details.fold > summary{padding:12px 0;cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px}
@@ -651,7 +656,8 @@ function cells() {
     if (!map.has(key)) map.set(key, { m: key, r: null });
     const c = map.get(key);
     // คิวที่ยังกินเวลา (รอ/เสร็จ/ปิด) สำคัญกว่าคิวที่ไม่มา
-    if (!c.r || (c.r.status === 'noshow' && r.status !== 'noshow')) c.r = r;
+    const rank = x => x.status === 'xcancel' ? 0 : x.status === 'noshow' ? 1 : 2;
+    if (!c.r || rank(r) > rank(c.r)) c.r = r;
   });
   return [...map.values()].sort((a, b) => a.m - b.m);
 }
@@ -675,7 +681,7 @@ function renderList() {
   if (drag) return;
   B.view = 'list'; navOn('list');
   const d = B.d, rows = d.rows, today = isToday();
-  const total = rows.filter(r => r.status !== 'block').length;
+  const total = rows.filter(r => r.status !== 'block' && r.status !== 'xcancel').length;
   const done = rows.filter(r => r.status === 'done').length;
   const wait = rows.filter(r => r.status === 'booked').length;
   const cur = currentRow();
@@ -719,14 +725,15 @@ function cellHtml(c) {
   const cur = currentRow();
   let kind = r ? r.status : d.free.indexOf(time) >= 0 ? 'free' : (d.breaks || []).indexOf(time) >= 0 ? 'brk' : 'cont';
   const late = kind === 'booked' && past;
-  const cls = ['cell', 'k-' + kind, past ? 'past' : '', late ? 'late' : '', cur && r && cur.r.id === r.id ? 'cur' : ''].join(' ');
-  const name = kind === 'block' ? '<i class="ti ti-lock"></i>' : kind === 'brk' ? '<i class="ti ti-tools-kitchen-2"></i> พัก' : kind === 'free' || kind === 'cont' ? '' :
+  const xc = kind === 'xcancel';   // ลูกค้าเพิ่งยกเลิก: ช่องว่าง แตะเพื่อลงคิวใหม่ได้
+  const cls = ['cell', 'k-' + kind, xc && d.free.indexOf(time) >= 0 ? 'k-free' : '', past ? 'past' : '', late ? 'late' : '', cur && r && cur.r.id === r.id ? 'cur' : ''].join(' ');
+  const name = kind === 'xcancel' ? `${esc(r.name)} <i class="ti ti-calendar-x" style="font-size:13px"></i>` : kind === 'block' ? '<i class="ti ti-lock"></i>' : kind === 'brk' ? '<i class="ti ti-tools-kitchen-2"></i> พัก' : kind === 'free' || kind === 'cont' ? '' :
     esc(r.name) + (r.source === 'walkin' && !r.phone ? ' <i class="ti ti-walk" style="font-size:13px;opacity:.6"></i>' : '') +
     (r.m && r.m.gift ? ' <i class="ti ti-gift au" style="font-size:14px"></i>' : '') +
     (r.m && r.m.warn ? ' <i class="ti ti-alert-triangle" style="font-size:14px;color:var(--c-noshow)"></i>' : '') +
     (r.m && r.m.mv ? ' <i class="ti ti-arrows-exchange" style="font-size:14px;color:var(--c-move)"></i>' : '') +
     (r.note ? ' <i class="ti ti-message-dots" style="font-size:14px;color:var(--c-note)"></i>' : '');
-  return `<div class="${cls}" data-a="cell" data-t="${time}" ${r ? `data-id="${r.id}"` : ''}>
+  return `<div class="${cls}" data-a="cell" data-t="${time}" ${r && !xc ? `data-id="${r.id}"` : ''}>
     <span class="t">${esc(r ? r.time : time)}</span><span class="n">${name}</span></div>`;
 }
 
@@ -832,8 +839,8 @@ function checkNew(n) {
   if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
   const old = $('.newbk'); if (old) old.remove();
   const el = document.createElement('button');
-  el.className = 'newbk';
   const k = n.kind || 'new', f = n.from || {};
+  el.className = 'newbk k-' + k;
   const when = k === 'move' ? `${dShort(f.date)} <span class="sv">${esc(f.time)}</span> → ${f.date === n.date ? '' : dShort(n.date) + ' '}<span class="sv">${esc(n.time)}</span>`
     : `${dShort(n.date)} · <span class="sv">${esc(n.time)}</span>`;
   const [ic, title] = { new: ['ti-bell-ringing', 'จองใหม่'], move: ['ti-arrows-exchange', 'ลูกค้าเลื่อนคิว'], cancel: ['ti-calendar-x', 'ลูกค้ายกเลิกคิว'], edit: ['ti-message-dots', 'ลูกค้าแก้ข้อความ'] }[k] || ['ti-bell-ringing', 'คิวเปลี่ยน'];
