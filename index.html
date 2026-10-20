@@ -116,6 +116,8 @@ a{color:inherit;text-decoration:none}
 .shade.full .tm-r{padding:12px 0}
 .shade.full .tm-n{font-size:22px;min-width:110px}
 .shade.full .sx{top:calc(14px + env(safe-area-inset-top));font-size:26px;width:48px;height:48px}
+.toast.top{bottom:auto;top:calc(14px + env(safe-area-inset-top))}
+.sbody > .card:first-child{margin-top:26px}   /* 3) ไม่ให้ปุ่ม ✕ ทับการ์ด */
 .toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 18px;border-radius:24px;font-size:14px;z-index:30;animation:fade .15s;white-space:nowrap}
 .load{display:flex;justify-content:center;padding:80px 0;color:var(--dim);font-size:26px}
 .load i{animation:spin 1s linear infinite}
@@ -214,7 +216,9 @@ body.tab-l .row.sel{background:var(--gold-bg);border-radius:10px;padding-left:10
 .dnav button{color:var(--mute);font-size:20px;padding:8px 8px;min-height:40px}
 .dnav .dpick{border:1px solid var(--gold-line);border-radius:10px;padding:5px 11px;min-height:38px;font-size:16px;color:var(--gold);white-space:nowrap}
 .dnav .dpick .ti{font-size:16px;margin-right:3px}
-.dnav .back{font-size:13px;padding:6px 4px;color:var(--mute)}
+.dnav .back{font-size:13px;padding:6px 4px;color:var(--mute);white-space:nowrap}
+@media (max-width:360px){ #app.fit .head .brand{display:none} .dnav .back .bt{display:none} .dnav .back{font-size:18px} }
+body.tab-p .hm i{aspect-ratio:1.7}   /* 5) แท็บเล็ตแนวตั้ง: ช่องเตี้ยลง ตารางพอดีจอ */
 .lgph{width:72px;height:72px;border-radius:50%;border:1px dashed var(--gold-line);display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:13px;flex-shrink:0}
 .crop{position:relative;margin:0 auto 6px;overflow:hidden;border-radius:12px;background:#0C0B0A;touch-action:none;cursor:grab}
 .crop img{position:absolute;max-width:none;user-select:none;-webkit-user-drag:none;pointer-events:none}
@@ -406,6 +410,7 @@ function toast(msg) {
   let el = $('.toast');
   if (!el) { el = document.createElement('div'); el.className = 'toast'; document.body.appendChild(el); }
   el.textContent = msg;
+  el.classList.toggle('top', !!document.querySelector('.shade:not(.under)'));
   clearTimeout(toastT);
   toastT = setTimeout(() => el.remove(), 2400);
 }
@@ -686,7 +691,7 @@ async function loadDay(date) {
 // ปฏิทินเลือกวัน (แตะวันที่บนหน้าคิว) — ตัวเลขทอง = จำนวนคิววันนั้น
 function calSheet() {
   const d = B.d;
-  let ym = d.date.slice(0, 7), counts = {};
+  let ym = d.date.slice(0, 7), counts = {}, loaded = false;
   const draw = () => {
     const [y, m] = ym.split('-').map(Number), first = new Date(Date.UTC(y, m - 1, 1)).getUTCDay(), n = new Date(Date.UTC(y, m, 0)).getUTCDate();
     const cells = Array.from({ length: (first + 6) % 7 }, () => '<span></span>');   // เริ่มสัปดาห์วันจันทร์
@@ -700,20 +705,20 @@ function calSheet() {
         <span style="font-size:19px">${MO_FULL[m - 1]} ${y + 543}</span>
         <button data-a="nm" class="mu" style="font-size:24px;padding:4px 12px" aria-label="เดือนถัดไป"><i class="ti ti-chevron-right"></i></button></div>
       <div class="calg">${['จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส', 'อา'].map(x => `<span class="h">${x}</span>`).join('')}${cells.join('')}</div>
-      <div class="mu" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:12px"><span><span class="au">ตัวเลขทอง</span> = จำนวนคิว</span><span style="color:var(--dim)">วันหยุดประจำ</span><span style="color:var(--c-noshow)">หยุดพิเศษ</span></div>
+      <div class="mu" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:12px"><span>${loaded ? '<span class="au">ตัวเลขทอง</span> = จำนวนคิว' : '<i class="ti ti-loader-2"></i> กำลังโหลดจำนวนคิว…'}</span><span style="color:var(--dim)">วันหยุดประจำ</span><span style="color:var(--c-noshow)">หยุดพิเศษ</span></div>
       <button class="btn line" data-a="go" data-d="${d.today}" style="margin-top:14px">กลับวันนี้</button>`;
   };
   const load = async () => {
     const want = ym;
     const r = await api('barberMonth', want).catch(() => null);
     if (!r || want !== ym || !sh.isConnected) return;
-    counts = r.counts; $('.sbody', sh).innerHTML = draw();
+    counts = r.counts; loaded = true; $('.sbody', sh).innerHTML = draw();
   };
   const sh = openSheet(draw(), (a, b) => {
     if (a === 'go') { closeSheet(); return loadDay(b.dataset.d).catch(() => {}); }
     if (a === 'pm' || a === 'nm') {
       const [y, m] = ym.split('-').map(Number), t = new Date(Date.UTC(y, m - 1 + (a === 'nm' ? 1 : -1), 1));
-      ym = t.toISOString().slice(0, 7); counts = {};
+      ym = t.toISOString().slice(0, 7); counts = {}; loaded = false;
       $('.sbody', sh).innerHTML = draw(); load();
     }
   });
@@ -778,7 +783,7 @@ function renderList() {
     <div class="head" style="margin-bottom:10px">
       <span class="sv brand" style="font-size:20px">๑๐ กันยา</span>
       <span class="dnav">
-        ${today ? '' : '<button data-a="today" class="back" aria-label="กลับวันนี้"><i class="ti ti-arrow-back-up"></i> วันนี้</button>'}
+        ${today ? '' : '<button data-a="today" class="back" aria-label="กลับวันนี้"><i class="ti ti-arrow-back-up"></i><span class="bt"> วันนี้</span></button>'}
         <button data-a="prev" aria-label="วันก่อน"><i class="ti ti-chevron-left"></i></button>
         <button data-a="cal" class="dpick" aria-label="เลือกวันจากปฏิทิน"><i class="ti ti-calendar"></i>${today ? 'วันนี้ · ' + dShort(d.date) : dShort(d.date)}</button>
         <button data-a="next" aria-label="วันถัดไป"><i class="ti ti-chevron-right"></i></button>
@@ -1662,6 +1667,7 @@ function heatHtml(d) {
     for (let i = 0; i + 1 < H.length; i++) {
       const n = d.heat[w][i] + d.heat[w][i + 1];
       if (!hi || n > hi.n) hi = { w, i, n };
+      if (d.brk && (d.brk[w][i] || d.brk[w][i + 1])) continue;   // ช่วงพัก ไม่ใช่ช่วงเงียบ
       if (!lo || n < lo.n) lo = { w, i, n };
     }
   });

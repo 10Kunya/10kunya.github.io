@@ -116,6 +116,8 @@ a{color:inherit;text-decoration:none}
 .shade.full .tm-r{padding:12px 0}
 .shade.full .tm-n{font-size:22px;min-width:110px}
 .shade.full .sx{top:calc(14px + env(safe-area-inset-top));font-size:26px;width:48px;height:48px}
+.toast.top{bottom:auto;top:calc(14px + env(safe-area-inset-top))}
+.sbody > .card:first-child{margin-top:26px}   /* 3) ไม่ให้ปุ่ม ✕ ทับการ์ด */
 .toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 18px;border-radius:24px;font-size:14px;z-index:30;animation:fade .15s;white-space:nowrap}
 .load{display:flex;justify-content:center;padding:80px 0;color:var(--dim);font-size:26px}
 .load i{animation:spin 1s linear infinite}
@@ -157,6 +159,9 @@ a{color:inherit;text-decoration:none}
 .hs-n{width:30px;height:30px;border-radius:50%;border:1px solid var(--gold);color:var(--gold);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--serif)}
 .help h4{margin:16px 0 6px;font-size:15px;font-weight:500;color:var(--gold)}
 .help ul{margin:0;padding-left:18px;line-height:1.7;font-size:14px}
+.hbtn{display:flex;gap:14px;flex-shrink:0}
+.hbtn button{white-space:nowrap}
+@media (max-width:360px){ .hbtn{gap:8px} .head .brand{font-size:21px} }
 .shopnote{border:1px solid var(--gold-line);background:var(--gold-bg);border-radius:12px;padding:11px 14px;display:flex;gap:10px;align-items:flex-start;margin-bottom:18px;line-height:1.55;white-space:pre-line;word-break:break-word}
 .shopnote .ti{color:var(--gold);font-size:20px;margin-top:1px}
 .wa{position:absolute;top:50%;transform:translateY(-50%);width:38px;height:38px;border-radius:50%;background:var(--bg);border:1px solid var(--line2);color:var(--mute);font-size:18px;display:flex;align-items:center;justify-content:center;z-index:1}
@@ -210,6 +215,7 @@ function toast(msg) {
   let el = $('.toast');
   if (!el) { el = document.createElement('div'); el.className = 'toast'; document.body.appendChild(el); }
   el.textContent = msg;
+  el.classList.toggle('top', !!document.querySelector('.shade:not(.under)'));
   clearTimeout(toastT);
   toastT = setTimeout(() => el.remove(), 2400);
 }
@@ -476,7 +482,7 @@ function showBook(resched, forOther) {
     <div class="head" style="align-items:flex-start">
       <div style="display:flex;align-items:center;gap:12px;min-width:0">${logoTag(48)}<div><div class="sv brand">${esc(d.shop)}</div>
       <div class="mu"><span id="hrs">${esc(d.open)} – ${esc(d.close)}</span> · ${esc(closedText(d.closedDays))}</div></div></div>
-      ${S.resched ? '' : `<span style="display:flex;gap:14px"><button id="hlp" class="mu" style="font-size:13px;text-align:center"><i class="ti ti-help-circle au" style="font-size:22px"></i><br>วิธีใช้</button>
+      ${S.resched ? '' : `<span class="hbtn"><button id="hlp" class="mu" style="font-size:13px;text-align:center"><i class="ti ti-help-circle au" style="font-size:22px"></i><br>วิธีใช้</button>
         <button id="mem" class="mu" style="font-size:13px;text-align:center"><i class="ti ti-id-badge-2 au" style="font-size:22px"></i><br>สมาชิก</button></span>`}
     </div>
     ${shopNoteHtml()}${noticeHtml()}
@@ -824,7 +830,7 @@ function showMember() {
   const me = store.get('k10_me', {}), back = S.d.tickets.length ? showTickets : showBook;
   $('#app').onclick = null;
   $('#app').innerHTML = `
-    <div class="head"><span class="sv brand">${esc(S.d.shop)}</span><span class="mu">สมาชิก</span></div>
+    <div class="head" style="align-items:center"><span style="display:flex;align-items:center;gap:12px">${logoTag(40)}<span class="sv brand">${esc(S.d.shop)}</span></span><span class="mu">สมาชิก</span></div>
     <div class="field"><i class="ti ti-phone"></i><input id="mp" placeholder="เบอร์โทรที่ใช้จอง" inputmode="tel" maxlength="12" value="${esc(me.phone || store.get('k10_mphone', ''))}">
       <button id="mgo" class="au" style="font-size:20px;padding:6px" aria-label="ดูแต้ม"><i class="ti ti-arrow-right"></i></button></div>
     <div class="err" id="merr"></div>
