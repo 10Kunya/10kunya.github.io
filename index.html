@@ -829,7 +829,11 @@ function checkNew(n) {
   const old = $('.newbk'); if (old) old.remove();
   const el = document.createElement('button');
   el.className = 'newbk';
-  el.innerHTML = `<i class="ti ti-bell-ringing"></i><span><b>จองใหม่ · ${esc(n.name)}</b><br>${dShort(n.date)} · <span class="sv">${esc(n.time)}</span>${n.note ? `<br>💬 ${esc(n.note)}` : ''}</span><i class="ti ti-x" style="margin-left:auto;opacity:.6"></i>`;
+  const k = n.kind || 'new', f = n.from || {};
+  const when = k === 'move' ? `${dShort(f.date)} <span class="sv">${esc(f.time)}</span> → ${f.date === n.date ? '' : dShort(n.date) + ' '}<span class="sv">${esc(n.time)}</span>`
+    : `${dShort(n.date)} · <span class="sv">${esc(n.time)}</span>`;
+  const [ic, title] = { new: ['ti-bell-ringing', 'จองใหม่'], move: ['ti-arrows-exchange', 'ลูกค้าเลื่อนคิว'], cancel: ['ti-calendar-x', 'ลูกค้ายกเลิกคิว'], edit: ['ti-message-dots', 'ลูกค้าแก้ข้อความ'] }[k] || ['ti-bell-ringing', 'คิวเปลี่ยน'];
+  el.innerHTML = `<i class="ti ${ic}"></i><span><b>${title} · ${esc(n.name)}</b><br>${when}${n.note && k !== 'cancel' ? `<br>💬 ${esc(n.note)}` : ''}</span><i class="ti ti-x" style="margin-left:auto;opacity:.6"></i>`;
   el.onclick = () => { el.remove(); B.view = 'list'; loadDay(n.date).catch(() => {}); };
   document.body.appendChild(el);
 }
@@ -1879,7 +1883,7 @@ const MANUAL = `
   </ul>
   <h4><i class="ti ti-bell-ringing"></i> แจ้งเตือนจองใหม่</h4>
   <ul>
-    <li>เปิดหน้านี้ค้างไว้ มีลูกค้าจองใหม่จะมีเสียง + สั่น + แถบทองด้านบน แตะแถบเพื่อดูวันนั้น</li>
+    <li>เปิดหน้านี้ค้างไว้ มีลูกค้าจองใหม่ / เลื่อนคิว / ยกเลิกคิว จะมีเสียง + สั่น + แถบทองด้านบน แตะแถบเพื่อดูวันนั้น</li>
     <li>หลังเปิดหน้า ให้แตะจอ 1 ครั้งก่อน เสียงถึงจะดังได้</li>
     <li>อยากให้เด้งแม้ปิดหน้านี้: ตั้งค่า → "แจ้งเตือนบนมือถือ" → เปิดการแจ้งเตือน (iPhone ต้องเพิ่มลงหน้าจอโฮมก่อน)</li>
   </ul>

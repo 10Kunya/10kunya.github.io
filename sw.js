@@ -11,7 +11,7 @@ self.addEventListener('push', e => e.waitUntil(show()));
 const OPTS = { icon: 'icon-192.png', badge: 'icon-192.png', tag: 'k10-new' };
 async function show() {
   // 1) แสดงทันที — iPhone จะตัดการทำงานถ้าไม่แสดงแจ้งเตือนเร็ว
-  await self.registration.showNotification('มีคิวจองใหม่', Object.assign({ body: 'แตะเพื่อดูตารางคิว', renotify: true, vibrate: [200, 100, 200] }, OPTS));
+  await self.registration.showNotification('คิวลูกค้ามีความเคลื่อนไหว', Object.assign({ body: 'แตะเพื่อดูตารางคิว', renotify: true, vibrate: [200, 100, 200] }, OPTS));
   // 2) ถ้าดึงชื่อลูกค้าได้ภายใน 5 วินาที ค่อยเปลี่ยนข้อความ (ไม่สั่นซ้ำ)
   try {
     const hit = await (await caches.open('k10')).match('sess');
@@ -21,7 +21,11 @@ async function show() {
     const r = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ fn: 'barberNewest', args: [sess] }), credentials: 'omit', signal: ctl.signal });
     clearTimeout(t);
     const n = (await r.json()).result;
-    if (n) await self.registration.showNotification('จองใหม่ · ' + n.name, Object.assign({ body: dShort(n.date) + ' · ' + n.time + (n.note ? '\n💬 ' + n.note : ''), renotify: false, silent: true }, OPTS));
+    if (!n) return;
+    const k = n.kind || 'new', f = n.from || {};
+    const title = { new: 'จองใหม่', move: 'ลูกค้าเลื่อนคิว', cancel: 'ลูกค้ายกเลิกคิว', edit: 'ลูกค้าแก้ข้อความ' }[k] || 'คิวเปลี่ยน';
+    const when = k === 'move' ? dShort(f.date) + ' ' + f.time + ' → ' + (f.date === n.date ? '' : dShort(n.date) + ' ') + n.time : dShort(n.date) + ' · ' + n.time;
+    await self.registration.showNotification(title + ' · ' + n.name, Object.assign({ body: when + (n.note && k !== 'cancel' ? '\n💬 ' + n.note : ''), renotify: false, silent: true }, OPTS));
   } catch (err) {}
 }
 
