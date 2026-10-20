@@ -116,6 +116,10 @@ a{color:inherit;text-decoration:none}
 .shade.full .tm-r{padding:12px 0}
 .shade.full .tm-n{font-size:22px;min-width:110px}
 .shade.full .sx{top:calc(14px + env(safe-area-inset-top));font-size:26px;width:48px;height:48px}
+.itip{position:fixed;z-index:60;background:var(--text);color:var(--bg);border-radius:10px;padding:7px 12px;font-size:14px;line-height:1.4;max-width:220px;text-align:center;
+  pointer-events:none;transform:translate(-50%,-100%);animation:fade .12s;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+.itip.below{transform:translate(-50%,0)}
+button[aria-label],a[aria-label]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .toast.top{bottom:auto;top:calc(14px + env(safe-area-inset-top))}
 .sbody > .card:first-child{margin-top:26px}   /* 3) ไม่ให้ปุ่ม ✕ ทับการ์ด */
 .toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 18px;border-radius:24px;font-size:14px;z-index:30;animation:fade .15s;white-space:nowrap}
@@ -220,12 +224,44 @@ function toast(msg) {
   toastT = setTimeout(() => el.remove(), 2400);
 }
 
+/*** ---------- กดค้างที่ปุ่มไอคอน (ไม่มีตัวหนังสือ) = บอกว่าปุ่มนี้ทำอะไร ---------- ***/
+(function iconTips() {
+  let timer = null, shown = false, tgt = null, x0 = 0, y0 = 0;
+  const iconOnly = el => { const t = el.innerText.trim(); return !t || /^[‹›−+×✕↩]$/.test(t); };
+  const hide = () => document.querySelectorAll('.itip').forEach(t => t.remove());
+  const show = el => {
+    hide();
+    const r = el.getBoundingClientRect(), tip = document.createElement('div');
+    tip.className = 'itip';
+    tip.textContent = el.getAttribute('aria-label');
+    const below = r.top < 70;
+    if (below) tip.classList.add('below');
+    tip.style.left = Math.min(Math.max(r.left + r.width / 2, 120), innerWidth - 120) + 'px';
+    tip.style.top = (below ? r.bottom + 8 : r.top - 8) + 'px';
+    document.body.appendChild(tip);
+    if (navigator.vibrate) navigator.vibrate(15);
+  };
+  document.addEventListener('pointerdown', e => {
+    const el = e.target.closest('button[aria-label],a[aria-label],[role=button][aria-label]');
+    shown = false; tgt = null;
+    if (!el || el.closest('#nav') || !iconOnly(el)) return;   // แถบล่างของช่างมีคำอธิบายแบบยาวอยู่แล้ว
+    tgt = el; x0 = e.clientX; y0 = e.clientY;
+    timer = setTimeout(() => { shown = true; show(el); }, 450);
+  }, true);
+  document.addEventListener('pointermove', e => { if (timer && Math.hypot(e.clientX - x0, e.clientY - y0) > 10) { clearTimeout(timer); timer = null; } }, true);
+  const end = () => { clearTimeout(timer); timer = null; if (shown) setTimeout(hide, 1500); };
+  ['pointerup', 'pointercancel'].forEach(t => document.addEventListener(t, end, true));
+  document.addEventListener('contextmenu', e => { if (e.target.closest('button[aria-label],a[aria-label]')) e.preventDefault(); }, true);
+  // กดค้างแล้วปล่อย = ดูคำอธิบายอย่างเดียว ไม่กดปุ่ม
+  document.addEventListener('click', e => { if (shown && tgt && tgt.contains(e.target)) { e.preventDefault(); e.stopImmediatePropagation(); shown = false; } }, true);
+})();
+
 /*** ---------- หน้าต่างเด้งจากล่าง ---------- ***/
 // ปิดได้ 4 ทาง: ปุ่ม ✕ · แตะพื้นหลัง · ปัดลง · ปุ่มย้อนกลับของมือถือ
 function makeShade(html, onClick) {
   const sh = document.createElement('div');
   sh.className = 'shade';
-  sh.innerHTML = '<div class="sheet"><div class="grab"></div><button class="sx" data-close aria-label="ปิด"><i class="ti ti-x"></i></button><div class="sbody">' + html + '</div></div>';
+  sh.innerHTML = '<div class="sheet"><div class="grab"></div><button class="sx" data-close aria-label="ปิดหน้าต่าง"><i class="ti ti-x"></i></button><div class="sbody">' + html + '</div></div>';
   sh.addEventListener('click', e => {
     if (e.target === sh || e.target.closest('[data-close]')) return popSheet();
     const b = e.target.closest('[data-a]');
@@ -812,6 +848,8 @@ function helpSheet() {
       ${d.referralBonus ? '<li>มาครั้งแรก? ใส่เบอร์เพื่อนที่แนะนำตอนจอง ได้แต้มทั้งคู่</li>' : ''}</ul>
     <h4><i class="ti ti-device-mobile"></i> เปิดได้เร็วขึ้น</h4>
     <ul><li>กด "เพิ่มไอคอนร้านลงหน้าจอ" (ใต้ตั๋ว หรือในหน้าสมาชิก) ครั้งหน้าแตะไอคอนจองได้ทันที</li></ul>
+    <h4><i class="ti ti-hand-finger"></i> ไม่แน่ใจว่าปุ่มไหนทำอะไร?</h4>
+    <ul><li>กดค้างที่ปุ่มไอคอน จะมีคำอธิบายขึ้นมา</li></ul>
     <h4><i class="ti ti-shield-lock"></i> ข้อมูลของคุณ</h4>
     <ul><li>ร้านเก็บชื่อและเบอร์ไว้เพื่อจองคิวและสะสมแต้มเท่านั้น</li></ul></div>
     <button class="btn" data-a="ok" style="margin-top:18px">เข้าใจแล้ว</button>`, () => closeSheet());
