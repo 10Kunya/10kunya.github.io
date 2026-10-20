@@ -432,8 +432,8 @@ function firstDay() {
 
 // ทุกช่วงเวลาของวัน (ไม่บอกว่าช่วงไหนว่าง) — วันนี้ตัดช่วงที่ผ่านไปแล้วออก
 function slotsOf(date) {
-  const d = S.d, out = [];
-  for (let m = toMin(d.open); m + d.slotMin <= toMin(d.close); m += d.slotMin) {
+  const d = S.d, out = [], h = d.days.find(x => x.date === date) || d;
+  for (let m = toMin(h.open); m + d.slotMin <= toMin(h.close); m += d.slotMin) {
     if (date === d.now.date && m <= d.now.min) continue;
     out.push(toHM(m));
   }
@@ -451,7 +451,7 @@ function showBook(resched, forOther) {
   $('#app').innerHTML = `
     <div class="head" style="align-items:flex-start">
       <div><div class="sv brand">${esc(d.shop)}</div>
-      <div class="mu">${esc(d.open)} – ${esc(d.close)} · ${esc(closedText(d.closedDays))}</div></div>
+      <div class="mu"><span id="hrs">${esc(d.open)} – ${esc(d.close)}</span> · ${esc(closedText(d.closedDays))}</div></div>
       ${S.resched ? '' : '<button id="mem" class="mu" style="font-size:13px;text-align:center"><i class="ti ti-id-badge-2 au" style="font-size:22px"></i><br>สมาชิก</button>'}
     </div>
     ${shopNoteHtml()}${noticeHtml()}
@@ -507,7 +507,8 @@ function renderWho(edit) {
 }
 
 function renderDays() {
-  const box = $('#days');
+  const box = $('#days'), day = S.d.days.find(x => x.date === S.day);
+  if (day && day.open && $('#hrs')) $('#hrs').textContent = day.open + ' – ' + day.close;
   box.innerHTML = S.d.days.map(x => `
     <button class="chip ${x.closed ? 'off' : x.date === S.day ? 'on' : ''}" data-d="${x.date}">
       ${dRel(x.date, S.d.now.date)}<small>${x.closed ? 'ร้านหยุด' : WD[wday(x.date)] + ' ' + ymd(x.date)[2]}</small>
@@ -690,6 +691,7 @@ function showTickets(focus) {
         <div class="sv au tk-time">${esc(t.time)}</div>
         <div class="mu">${dLong(t.date)}</div>
         <div style="margin-top:12px">${esc(t.name)}</div>
+        ${t.moved ? `<div class="badge" style="margin-top:10px;border-color:var(--gold);color:var(--gold);white-space:normal"><i class="ti ti-arrows-exchange"></i> ร้านเลื่อนคิวให้ · เดิม ${dShort(t.moved.slice(0, 10))} ${esc(t.moved.slice(11))}</div>` : ''}
         ${t.note ? `<div class="mu" style="margin-top:4px"><i class="ti ti-message-dots"></i> ${esc(t.note)}</div>` : ''}
       </div>
       <div class="tk-bar">

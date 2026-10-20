@@ -181,7 +181,12 @@ body.tab-l .row.sel{background:var(--gold-bg);border-radius:10px;padding-left:10
 .cell.k-booked{border-color:#3E372F}
 .cell.k-free,.cell.k-cont{border-style:dashed;border-color:#3A332C;color:#5E574E}
 .cell.k-cont{border-color:transparent}
-.cell.k-block{color:var(--dim);background:#181512}
+.cell.k-block,.cell.k-brk{color:var(--dim);background:#181512}
+.cell.k-brk{border-color:#221F1B}
+.wk{gap:8px !important}
+.wk .d{width:38px;flex:none !important}
+.wk select{font-size:20px !important}
+.wk.off .d{color:var(--dim)}
 .cell.k-done{color:var(--mute)}
 .cell.k-done .t{text-decoration:line-through}
 .cell.k-noshow{color:var(--mute)}
@@ -709,10 +714,10 @@ function cellHtml(c) {
   const d = B.d, r = c.r, time = toHM(c.m);
   const past = d.date < d.today || (isToday() && c.m + d.slotMin <= d.nowMin);
   const cur = currentRow();
-  let kind = r ? r.status : d.free.indexOf(time) >= 0 ? 'free' : 'cont';
+  let kind = r ? r.status : d.free.indexOf(time) >= 0 ? 'free' : (d.breaks || []).indexOf(time) >= 0 ? 'brk' : 'cont';
   const late = kind === 'booked' && past;
   const cls = ['cell', 'k-' + kind, past ? 'past' : '', late ? 'late' : '', cur && r && cur.r.id === r.id ? 'cur' : ''].join(' ');
-  const name = kind === 'block' ? '<i class="ti ti-lock"></i>' : kind === 'free' || kind === 'cont' ? '' :
+  const name = kind === 'block' ? '<i class="ti ti-lock"></i>' : kind === 'brk' ? '<i class="ti ti-tools-kitchen-2"></i> พัก' : kind === 'free' || kind === 'cont' ? '' :
     esc(r.name) + (r.source === 'walkin' && !r.phone ? ' <i class="ti ti-walk" style="font-size:13px;opacity:.6"></i>' : '') +
     (r.m && r.m.gift ? ' <i class="ti ti-gift au" style="font-size:14px"></i>' : '') +
     (r.m && r.m.warn ? ' <i class="ti ti-alert-triangle" style="font-size:14px;color:var(--warn)"></i>' : '') +
@@ -735,6 +740,10 @@ $('#app').addEventListener('click', async e => {
       return rowSheet(r);
     }
     if (b.classList.contains('k-free') && !b.classList.contains('past')) return addSheet(b.dataset.t);
+    if (b.classList.contains('k-brk') && !b.classList.contains('past')) return openSheet(`<h3><span class="sv au" style="font-size:24px">${esc(b.dataset.t)}</span> &nbsp;ช่วงพัก</h3>
+      <div class="mu" style="margin-bottom:8px">ลูกค้าเห็นช่องนี้เป็นคิวเต็ม</div>
+      <button class="act gold" data-a="bo"><i class="ti ti-lock-open"></i>เปิดรับคิวช่วงนี้ (เฉพาะวันนี้)</button>`,
+      () => act({ action: 'breakopen', date: B.d.date, time: b.dataset.t }, 'เปิดรับคิว ' + b.dataset.t + ' แล้ว'));
   }
 });
 
@@ -789,7 +798,7 @@ function bindDrag(grid) {
     if (!dd.target) return;
     dd.target.classList.remove('drop');
     const to = dd.target.dataset.t;
-    askConfirm(`ย้าย ${dd.r.name} → ${to}`, 'ย้าย', () => act({ action: 'move', id: dd.r.id, date: B.d.date, time: to }, 'ย้ายเป็น ' + to), 'ไม่ย้าย');
+    askConfirm(`ย้าย ${dd.r.name} → ${to}`, 'ย้าย', () => moveAct(dd.r, B.d.date, to), 'ไม่ย้าย');
   };
   grid.onpointerup = end;
   grid.onpointercancel = end;
@@ -838,6 +847,24 @@ async function act(p, msg) {
   if (pt) msg += ` · +${pt.earn} แต้ม${pt.mult > 1 ? ' (×' + pt.mult + ')' : ''}${pt.bonus.length ? ' · ' + pt.bonus.join(' · ') : ''} · รวม ${pt.member.points}`;
   if (msg) toast(msg);
   if (pt && pt.tierUp) celebrate(`🎉 ${pt.member.name || 'ลูกค้า'} ขึ้นระดับ${pt.tierUp}แล้ว`);
+}
+
+// เลื่อนคิวแล้ว ถ้ามีเบอร์ลูกค้า → ปุ่มส่ง SMS (เปิดแอปข้อความพร้อมข้อความ ช่างกดส่งเอง)
+async function moveAct(r, date, time) {
+  const old = { date: B.d.date, time: r.time };   // คิวในตารางเป็นของวันที่เปิดดูอยู่
+  await act({ action: 'move', id: r.id, date: date, time: time }, 'เลื่อนเป็น ' + time);
+  if (!r.phone || (old.date === date && old.time === time)) return;
+  const now = B.d.rows.find(x => x.id === r.id);
+  if (B.d.date !== date || !now || now.time !== time) return;   // เลื่อนไม่สำเร็จ
+  const iOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const msg = `๑๐ กันยา: ขอเลื่อนคิวคุณ${r.name} จาก ${dShort(old.date)} ${old.time} เป็น ${dShort(date)} ${time} ครับ` +
+    (r.token ? `\nดูตั๋ว / เลื่อนเวลาเอง: ${CUSTOMER_URL}?t=${r.token}` : '');
+  openSheet(`<h3>แจ้งลูกค้า</h3>
+    <div class="mu" style="margin-bottom:10px">${esc(r.name)} · ${esc(r.phone)}</div>
+    <div class="pq" style="white-space:pre-line">${esc(msg)}</div>
+    <a class="btn" href="sms:${esc(r.phone)}${iOS ? '&' : '?'}body=${encodeURIComponent(msg)}" data-a="x" style="margin-top:14px"><i class="ti ti-message"></i> ส่ง SMS</a>
+    <a class="btn line" href="tel:${esc(r.phone)}" data-a="x" style="margin-top:10px"><i class="ti ti-phone"></i> โทรแทน</a>
+    <button class="link" data-a="x">ไม่แจ้ง</button>`, () => setTimeout(closeSheet, 300));
 }
 
 function rowSheet(r) {
@@ -902,7 +929,7 @@ async function moveSheet(r, date) {
     if (sh) { $('.sbody', sh).innerHTML = html; return; }
     sh = stackSheet(html, (a, b) => {
       if (a === 'day') { cur = b.dataset.d; return draw(); }
-      if (a === 'pick') act({ action: 'move', id: r.id, date: cur, time: b.dataset.t }, 'เลื่อนเป็น ' + b.dataset.t);
+      if (a === 'pick') moveAct(r, cur, b.dataset.t);
     });
   };
   draw();
@@ -1023,7 +1050,7 @@ const clone = o => JSON.parse(JSON.stringify(o));
 
 /*** หน้าตั้งค่า = รายการหมวด → แตะเข้าแต่ละหมวด ***/
 const SET_PAGES = {
-  shop: ['ti-building-store', 'ร้าน', s => `${s.open}–${s.close} · คิวละ ${s.slotMin} นาที · ${closedText(s.closedDays)}`],
+  shop: ['ti-building-store', 'ร้าน', s => `${s.open}–${s.close} · คิวละ ${s.slotMin} นาที · ${closedText(s.closedDays)}${s.breaks.some(b => b.on !== false) ? ' · มีช่วงพัก' : ''}`],
   price: ['ti-receipt', 'ราคา', s => s.prices.length ? s.prices.map(v => '฿' + v).join(' · ') : 'ยังไม่ได้ตั้ง'],
   notice: ['ti-speakerphone', 'ประกาศถึงลูกค้า', s => s.notice.on && s.notice.text ? `<span class="au">เปิดอยู่</span> · ${esc(s.notice.text.slice(0, 24))}${s.notice.text.length > 24 ? '…' : ''}` : 'ปิดอยู่'],
   member: ['ti-medal', 'สมาชิกและรางวัล', s => `${s.tiers.length} ระดับ · ${s.rewards.length} รางวัล`],
@@ -1134,16 +1161,23 @@ const PAGE_BODY = {
     const slots = [15, 20, 30, 40, 45, 60, 90];
     if (slots.indexOf(s.slotMin) < 0) slots.push(s.slotMin);
     return `
-    <div class="row"><i class="ti ti-sun"></i><span>เปิด</span><select id="so">${timeOpts(s.open)}</select></div>
-    <div class="row"><i class="ti ti-moon"></i><span>ปิด</span><select id="sc">${timeOpts(s.close)}</select></div>
-    <div class="row"><i class="ti ti-clock-hour-4"></i><span>คิวละ</span>
+    <div class="mu" style="padding:4px 0 4px"><i class="ti ti-clock"></i> เวลาเปิด–ปิด · สวิตช์ = เปิด/หยุดวันนั้น</div>
+    ${[1, 2, 3, 4, 5, 6, 0].map(n => { const w = s.week[n]; return `<div class="row wk ${w.on ? '' : 'off'}"><span class="d">${WD[n]}</span>
+      ${w.on ? `<select class="wsel" data-d="${n}" data-k="open">${timeOpts(w.open)}</select><span class="mu">–</span><select class="wsel" data-d="${n}" data-k="close">${timeOpts(w.close)}</select>`
+        : `<span class="mu" style="flex:1">หยุดประจำ</span><input type="hidden" class="wsel" data-d="${n}" data-k="open" value="${w.open}"><input type="hidden" class="wsel" data-d="${n}" data-k="close" value="${w.close}">`}
+      <span style="flex:1"></span>${sw(w.on, `data-a="wtog" data-n="${n}"`)}</div>`; }).join('')}
+    <button class="mu" data-a="wsame" style="padding:8px 0"><i class="ti ti-copy"></i> ใช้เวลาของ${WD_FULL[[1, 2, 3, 4, 5, 6, 0].find(n => s.week[n].on)]}กับทุกวันที่เปิด</button>
+    <div class="mu" style="padding:14px 0 8px"><i class="ti ti-tools-kitchen-2"></i> ช่วงพักประจำ · ลูกค้าเห็นเป็นคิวเต็ม</div>
+    ${s.breaks.map((b, i) => `<div class="card pcard ${b.on !== false ? '' : 'off'}"><div class="prow">
+      <button data-a="kedit" data-i="${i}" style="flex:1;text-align:left;display:flex;align-items:center;gap:10px">
+        <i class="ti ti-tools-kitchen-2 au"></i><span><span class="sv au" style="font-size:20px">${b.from}–${b.to}</span>
+        <span class="mu" style="display:block">${b.days.length === 7 ? 'ทุกวัน' : [1, 2, 3, 4, 5, 6, 0].filter(n => b.days.indexOf(n) >= 0).map(n => WD[n]).join(' ')} · แตะเพื่อแก้</span></span></button>
+      ${sw(b.on !== false, `data-a="ktog" data-i="${i}"`)}</div></div>`).join('')}
+    <button class="mu" data-a="kadd" style="padding:4px 0 8px"><i class="ti ti-plus"></i> เพิ่มช่วงพัก</button>
+    <div class="row" style="margin-top:6px"><i class="ti ti-clock-hour-4"></i><span>คิวละ</span>
       <select id="ss">${slots.sort((a, b) => a - b).map(n => `<option value="${n}" ${n === s.slotMin ? 'selected' : ''}>${n} นาที</option>`).join('')}</select></div>
     <div class="row"><i class="ti ti-calendar-event"></i><span>จองล่วงหน้า</span>
       <span class="step" style="flex:none"><button data-a="adv-">−</button><span class="sv au" style="font-size:22px;min-width:56px;text-align:center">${s.advanceDays} วัน</span><button data-a="adv+">+</button></span></div>
-    <div class="mu" style="padding:16px 0 8px"><i class="ti ti-calendar-off"></i> วันหยุดประจำ</div>
-    <div class="chips" style="grid-template-columns:repeat(7,1fr);font-size:13px">
-      ${[1, 2, 3, 4, 5, 6, 0].map(n => `<button class="chip ${s.closedDays.indexOf(n) >= 0 ? 'on' : ''}" data-a="wd" data-n="${n}">${WD[n].replace('.', '')}</button>`).join('')}
-    </div>
     <div class="mu" style="padding:18px 0 8px"><i class="ti ti-beach"></i> หยุดพิเศษ</div>
     <div>${s.holidays.map(h => `<span class="hol">${dShort(h)}<button data-a="hdel" data-h="${h}" aria-label="ลบ"><i class="ti ti-x"></i></button></span>`).join('')}</div>
     <div class="row" style="border:0;padding-top:4px"><i class="ti ti-plus mu"></i><input type="date" id="sh" min="${new Date().toISOString().slice(0, 10)}" style="flex:1;text-align:left;font-family:var(--sans);font-size:18px;color:var(--text)"></div>
@@ -1233,7 +1267,8 @@ function readSettings() {
   const s = B.set, v = id => $(id) ? $(id).value : null;
   if ($('#mnote')) s.memberNote = v('#mnote').trim();
   if ($('#ntx')) s.notice = { on: s.notice.on, text: v('#ntx').trim(), until: v('#nun') || '' };
-  if ($('#so')) { s.open = v('#so'); s.close = v('#sc'); s.slotMin = +v('#ss'); s.phone = v('#sp').trim(); s.mapUrl = v('#sm').trim(); }
+  document.querySelectorAll('.wsel').forEach(el => { s.week[+el.dataset.d][el.dataset.k] = el.value; });
+  if ($('#ss')) { s.slotMin = +v('#ss'); s.phone = v('#sp').trim(); s.mapUrl = v('#sm').trim(); }
   const f = (el, k) => $('input[data-f="' + k + '"]', el).value;
   if (document.querySelector('.ed.tier')) {
     s.tiers = [...document.querySelectorAll('.ed.tier')].map(el => ({ name: f(el, 'name'), min: +f(el, 'min') || 0, earn: +f(el, 'earn') || 0 }));
@@ -1256,6 +1291,33 @@ async function saveSet(btn) {
 // โปรโมชั่น: บันทึกทันที (รอให้กดปุ่ม −/+ เสร็จก่อนค่อยส่ง)
 let promoT;
 function savePromoSoon() { renderSettings(); clearTimeout(promoT); promoT = setTimeout(() => saveSet(), 700); }
+
+// แก้ช่วงพักประจำ (ยังไม่บันทึกจนกด "บันทึก" ในหน้าร้าน)
+function breakSheet(i) {
+  const s = B.set, isNew = i < 0;
+  const k = isNew ? { days: [0, 1, 2, 3, 4, 5, 6].filter(n => s.week[n].on), from: '12:00', to: '13:00', on: true } : clone(s.breaks[i]);
+  const draw = () => `<h3>${isNew ? 'เพิ่มช่วงพัก' : 'แก้ช่วงพัก'}</h3>
+    <div class="chips" style="grid-template-columns:repeat(7,1fr);gap:4px">
+      ${[1, 2, 3, 4, 5, 6, 0].map(n => `<button class="chip ${k.days.indexOf(n) >= 0 ? 'on' : ''}" data-a="d" data-n="${n}" style="padding:9px 0;font-size:15px">${WD[n].replace('.', '')}</button>`).join('')}</div>
+    <div class="row" style="margin-top:10px"><i class="ti ti-clock mu"></i><span style="flex:1">เวลา</span>
+      <select class="bsel" id="kf" style="font-size:20px">${timeOpts(k.from)}</select><small class="mu">ถึง</small><select class="bsel" id="kt" style="font-size:20px">${timeOpts(k.to)}</select></div>
+    <div class="err" id="ke2"></div>
+    <button class="btn" data-a="ok" style="margin-top:16px">ตกลง</button>
+    ${isNew ? '' : '<button class="link" data-a="del" style="color:var(--warn)"><i class="ti ti-trash"></i> ลบช่วงนี้</button>'}`;
+  const sh = openSheet(draw(), (a, el) => {
+    readSettings();
+    k.from = $('#kf', sh).value; k.to = $('#kt', sh).value;
+    if (a === 'd') { const n = +el.dataset.n, j = k.days.indexOf(n); j >= 0 ? k.days.splice(j, 1) : k.days.push(n); $('.sbody', sh).innerHTML = draw(); return; }
+    if (a === 'del') { s.breaks.splice(i, 1); closeSheet(); return renderSettings(); }
+    if (a === 'ok') {
+      if (!k.days.length) { $('#ke2', sh).textContent = 'เลือกอย่างน้อย 1 วัน'; return; }
+      if (toMin(k.to) <= toMin(k.from)) { $('#ke2', sh).textContent = 'เวลาสิ้นสุดต้องหลังเวลาเริ่ม'; return; }
+      if (isNew) s.breaks.push(k); else s.breaks[i] = k;
+      closeSheet(); renderSettings(); toast('อย่าลืมกดบันทึก');
+    }
+  });
+  sh.classList.add('big');
+}
 
 // แก้ช่วงแต้มคูณ
 function boostSheet(i) {
@@ -1302,6 +1364,11 @@ $('#app').addEventListener('click', async e => {
   if (a === 'icon') { const r = s.rewards[+b.dataset.i]; r.icon = ICONS[(ICONS.indexOf(r.icon) + 1) % ICONS.length]; return renderSettings(); }
   if (a === 'rdel') { s.rewards.splice(+b.dataset.i, 1); return renderSettings(); }
   if (a === 'hdel') { s.holidays = s.holidays.filter(h => h !== b.dataset.h); return renderSettings(); }
+  if (a === 'wtog') { const w = s.week[+b.dataset.n]; w.on = !w.on; return renderSettings(); }
+  if (a === 'wsame') { const src = s.week[[1, 2, 3, 4, 5, 6, 0].find(n => s.week[n].on)]; s.week.forEach(w => { if (w.on) { w.open = src.open; w.close = src.close; } }); toast('ตั้งเวลาเดียวกันแล้ว · กดบันทึก'); return renderSettings(); }
+  if (a === 'ktog') { const k = s.breaks[+b.dataset.i]; k.on = k.on === false; return renderSettings(); }
+  if (a === 'kedit') return breakSheet(+b.dataset.i);
+  if (a === 'kadd') return breakSheet(-1);
   if (a === 'pdel') { s.prices.splice(+b.dataset.i, 1); return renderSettings(); }
   if (a === 'padd') return numSheet('เพิ่มราคา', v => { closeSheet(); if (s.prices.indexOf(v) < 0) s.prices.push(v); s.prices.sort((x, y) => x - y); renderSettings(); });
   if (a === 'ntog') { s.notice.on = !s.notice.on; return renderSettings(); }
@@ -1859,7 +1926,9 @@ const MANUAL = `
   </ul>
   <h4><i class="ti ti-adjustments-horizontal"></i> ตั้งค่า</h4>
   <ul>
-    <li>เวลาเปิด–ปิด · คิวละกี่นาที · จองล่วงหน้ากี่วัน · วันหยุดประจำ · วันหยุดพิเศษ</li>
+    <li>เวลาเปิด–ปิดแยกรายวัน (สวิตช์ = เปิด/หยุดวันนั้น) · ช่วงพักประจำ · คิวละกี่นาที · จองล่วงหน้ากี่วัน · วันหยุดพิเศษ</li>
+    <li>ช่วงพัก: ลูกค้าเห็นเป็นคิวเต็ม · ในหน้าคิวขึ้น "พัก" แตะเพื่อเปิดรับคิวเฉพาะวันนั้น</li>
+    <li>เลื่อน/ลากย้ายคิวที่มีเบอร์ จะมีปุ่ม "ส่ง SMS" ข้อความพร้อมลิงก์ตั๋วให้ลูกค้า (ส่งจากมือถือช่าง) · ตั๋วลูกค้าก็ขึ้นว่าร้านเลื่อนให้</li>
     <li>ตั้งวันหยุดทับวันที่มีคิว ระบบจะบอกจำนวนคิวที่ต้องโทรแจ้งลูกค้า</li>
     <li>ระดับสมาชิก / รางวัล ใช้ปุ่ม − + · แตะไอคอนรางวัลเพื่อเปลี่ยนรูป · อย่าลืมกด "บันทึก"</li>
     <li>เปลี่ยน PIN · เปิดชีตข้อมูล · ออกจากระบบเครื่องนี้ อยู่ท้ายหน้า</li>
