@@ -20,8 +20,11 @@
   color-scheme: dark;
   --bg:#141210; --card:#1B1815; --gold-bg:#1E1A15;
   --line:#221F1B; --line2:#2E2925; --gold-line:#6B5A3E;
-  --text:#E6DFD4; --mute:#857C70; --dim:#4A443D;
+  --text:#F3EEE6; --mute:#A79E91; --dim:#6A6359;
   --gold:#C9A66B; --warn:#C49384; --ok:#9DB58A;
+  --c-noshow:#D9705A;   /* ไม่มา = แดงอิฐ (ร้ายแรงสุด) */
+  --c-move:#E0954A;     /* เลื่อนบ่อย = ส้มอำพัน (ระวัง) */
+  --c-note:#8FB0CC;     /* ข้อความลูกค้า = ฟ้าหม่น (ข้อมูล) */
   --sans:'IBM Plex Sans Thai',system-ui,sans-serif;
   --serif:'Cormorant Garamond','Noto Serif Thai',Georgia,serif;
 }
@@ -679,6 +682,23 @@ async function submit() {
 }
 
 /*** ---------- ตั๋ว ---------- ***/
+// เลื่อน/ยกเลิกเองได้ไหม (ร้านตั้งจำนวนครั้ง + เวลาสุดท้ายก่อนคิว)
+function tLock(t) {
+  const d = S.d, until = (Date.parse(t.date) - Date.parse(d.now.date)) / 60000 + toMin(t.time) - d.now.min;
+  const late = !!d.moveCutoff && until < d.moveCutoff, noMove = !!d.moveLimit && t.moves >= d.moveLimit;
+  return { late, noMove, locked: late, left: d.moveLimit ? Math.max(0, d.moveLimit - t.moves) : null,
+    deadline: d.moveCutoff ? toHM(Math.max(0, toMin(t.time) - d.moveCutoff)) : '', sameDay: toMin(t.time) - d.moveCutoff >= 0 };
+}
+function lockHtml(t) {
+  const k = tLock(t), d = S.d;
+  if (k.late) return `<div style="margin-top:8px;font-size:13px;color:var(--warn)">ใกล้เวลาคิวแล้ว · เลื่อนหรือยกเลิก${d.phone ? ' โทรหาร้าน' : ' แจ้งร้านโดยตรง'}</div>`;
+  const bits = [];
+  if (k.noMove) bits.push(`<span style="color:var(--warn)">เลื่อนครบ ${d.moveLimit} ครั้งแล้ว · เลื่อนอีกต้องโทรหาร้าน</span>`);
+  else if (k.left != null) bits.push(`เลื่อนเองได้อีก ${k.left} ครั้ง`);
+  if (k.deadline && k.sameDay) bits.push(`เลื่อน/ยกเลิกได้ถึง ${k.deadline}`);
+  return bits.length ? `<div class="mu" style="margin-top:8px">${bits.join(' · ')}</div>` : '';
+}
+
 function showTickets(focus) {
   S.mode = 'ticket'; S.resched = null; S.forOther = false;
   const d = S.d;
@@ -691,6 +711,7 @@ function showTickets(focus) {
         <div class="sv au tk-time">${esc(t.time)}</div>
         <div class="mu">${dLong(t.date)}</div>
         <div style="margin-top:12px">${esc(t.name)}</div>
+        ${lockHtml(t)}
         ${t.moved ? `<div class="badge" style="margin-top:10px;border-color:var(--gold);color:var(--gold);white-space:normal"><i class="ti ti-arrows-exchange"></i> ร้านเลื่อนคิวให้ · เดิม ${dShort(t.moved.slice(0, 10))} ${esc(t.moved.slice(11))}</div>` : ''}
         ${t.note ? `<div class="mu" style="margin-top:4px"><i class="ti ti-message-dots"></i> ${esc(t.note)}</div>` : ''}
       </div>
@@ -698,8 +719,8 @@ function showTickets(focus) {
         ${d.mapUrl ? `<a href="${esc(d.mapUrl)}" target="_blank"><i class="ti ti-map-pin"></i><small>แผนที่</small></a>` : ''}
         ${d.phone ? `<a href="tel:${esc(d.phone)}"><i class="ti ti-phone"></i><small>โทร</small></a>` : ''}
         <button data-a="link" data-k="${t.token}"><i class="ti ti-link"></i><small>เก็บลิงก์</small></button>
-        <button data-a="move" data-k="${t.token}"><i class="ti ti-pencil"></i><small>เลื่อน</small></button>
-        <button data-a="cancel" data-k="${t.token}" class="warn"><i class="ti ti-x"></i><small>ยกเลิก</small></button>
+        ${tLock(t).locked ? '' : `<button data-a="move" data-k="${t.token}" ${tLock(t).noMove ? 'style="display:none"' : ''}><i class="ti ti-pencil"></i><small>เลื่อน</small></button>
+        <button data-a="cancel" data-k="${t.token}" class="warn"><i class="ti ti-x"></i><small>ยกเลิก</small></button>`}
       </div>
     </div>`).join('') + `
     <div class="mu" style="text-align:center;margin:4px 0 18px">เปิดหน้านี้อีกครั้งเพื่อเลื่อนหรือยกเลิก · กด "เก็บลิงก์" ไว้เปิดจากเครื่องอื่น</div>
@@ -721,7 +742,8 @@ function showTickets(focus) {
     if (b.dataset.a === 'cancel') {
       askConfirm(`ยกเลิกคิว ${dShort(t.date)} ${t.time}?`, 'ยกเลิกคิว', async () => {
         try {
-          await call('cancelBooking', t.token);
+          const r = await call('cancelBooking', t.token);
+          if (!r.ok) { toast(r.msg); await load(); return showTickets(); }   // ใกล้เวลาเกินไป → ต้องโทรหาร้าน
           store.set('k10_tickets', store.get('k10_tickets', []).filter(x => x !== t.token));   // ยกเลิกเอง ไม่ต้องแจ้งว่าร้านยกเลิก
           await load();
           toast('ยกเลิกแล้ว');

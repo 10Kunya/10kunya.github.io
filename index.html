@@ -20,8 +20,11 @@
   color-scheme: dark;
   --bg:#141210; --card:#1B1815; --gold-bg:#1E1A15;
   --line:#221F1B; --line2:#2E2925; --gold-line:#6B5A3E;
-  --text:#E6DFD4; --mute:#857C70; --dim:#4A443D;
+  --text:#F3EEE6; --mute:#A79E91; --dim:#6A6359;
   --gold:#C9A66B; --warn:#C49384; --ok:#9DB58A;
+  --c-noshow:#D9705A;   /* ไม่มา = แดงอิฐ (ร้ายแรงสุด) */
+  --c-move:#E0954A;     /* เลื่อนบ่อย = ส้มอำพัน (ระวัง) */
+  --c-note:#8FB0CC;     /* ข้อความลูกค้า = ฟ้าหม่น (ข้อมูล) */
   --sans:'IBM Plex Sans Thai',system-ui,sans-serif;
   --serif:'Cormorant Garamond','Noto Serif Thai',Georgia,serif;
 }
@@ -179,7 +182,7 @@ body.tab-l .row.sel{background:var(--gold-bg);border-radius:10px;padding-left:10
 .cell .t{font-family:var(--serif);font-variant-numeric:lining-nums;font-weight:500;font-size:19px;width:50px;flex-shrink:0}
 .cell .n{overflow:hidden;text-overflow:ellipsis;min-width:0}
 .cell.k-booked{border-color:#3E372F}
-.cell.k-free,.cell.k-cont{border-style:dashed;border-color:#3A332C;color:#5E574E}
+.cell.k-free,.cell.k-cont{border-style:dashed;border-color:#3A332C;color:#7A7268}
 .cell.k-cont{border-color:transparent}
 .cell.k-block,.cell.k-brk{color:var(--dim);background:#181512}
 .cell.k-brk{border-color:#221F1B}
@@ -280,7 +283,7 @@ body.tab-l .k b{font-size:34px}
 .npad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .npad button{border:1px solid var(--line2);border-radius:12px;padding:12px 0;font-family:var(--serif);font-variant-numeric:lining-nums;font-size:24px}
 .npad button:active{background:var(--gold-bg)}
-.pq{border-left:3px solid var(--gold);background:var(--gold-bg);border-radius:0 10px 10px 0;padding:8px 12px;margin:0 0 10px;line-height:1.5;word-break:break-word}
+.pq{border-left:3px solid var(--c-note);background:#161A1E;border-radius:0 10px 10px 0;padding:8px 12px;margin:10px 0;line-height:1.5;word-break:break-word}
 .set textarea{width:100%;background:transparent;border:1px solid var(--gold-line);border-radius:12px;outline:0;padding:12px;font-size:18px;line-height:1.55;resize:vertical}
 .pchip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line2);border-radius:22px;padding:4px 6px 4px 14px;margin:0 8px 8px 0;font-family:var(--serif);font-variant-numeric:lining-nums;font-size:21px;color:var(--gold)}
 .pchip button{color:var(--mute);font-size:17px;padding:6px 8px}
@@ -720,8 +723,9 @@ function cellHtml(c) {
   const name = kind === 'block' ? '<i class="ti ti-lock"></i>' : kind === 'brk' ? '<i class="ti ti-tools-kitchen-2"></i> พัก' : kind === 'free' || kind === 'cont' ? '' :
     esc(r.name) + (r.source === 'walkin' && !r.phone ? ' <i class="ti ti-walk" style="font-size:13px;opacity:.6"></i>' : '') +
     (r.m && r.m.gift ? ' <i class="ti ti-gift au" style="font-size:14px"></i>' : '') +
-    (r.m && r.m.warn ? ' <i class="ti ti-alert-triangle" style="font-size:14px;color:var(--warn)"></i>' : '') +
-    (r.note ? ' <i class="ti ti-message-dots au" style="font-size:14px"></i>' : '');
+    (r.m && r.m.warn ? ' <i class="ti ti-alert-triangle" style="font-size:14px;color:var(--c-noshow)"></i>' : '') +
+    (r.m && r.m.mv ? ' <i class="ti ti-arrows-exchange" style="font-size:14px;color:var(--c-move)"></i>' : '') +
+    (r.note ? ' <i class="ti ti-message-dots" style="font-size:14px;color:var(--c-note)"></i>' : '');
   return `<div class="${cls}" data-a="cell" data-t="${time}" ${r ? `data-id="${r.id}"` : ''}>
     <span class="t">${esc(r ? r.time : time)}</span><span class="n">${name}</span></div>`;
 }
@@ -886,7 +890,7 @@ function rowSheet(r) {
     (r.phone ? `<a class="act" href="tel:${esc(r.phone)}"><i class="ti ti-phone"></i>${esc(r.phone)}</a>` : '') +
     (r.status === 'done' ? `<button class="act" data-a="price"><i class="ti ti-receipt"></i>${r.price ? 'ราคา <span class="sv au" style="font-size:19px">฿' + r.price + '</span> · แตะเพื่อแก้' : 'ใส่ราคา'}</button>` : '') +
     '<button class="act" data-a="booked"><i class="ti ti-arrow-back-up"></i>กลับเป็นรอคิว</button>';
-  const note = r.note ? `<div class="pq"><i class="ti ti-message-dots au"></i> ${esc(r.note)}</div>` : '';
+  const note = r.note ? `<div class="pq"><i class="ti ti-message-dots" style="color:var(--c-note)"></i> ${esc(r.note)}</div>` : '';
   openSheet(head + memTags(r) + note + acts, a => {
     if (a === 'done') return doneFlow(r.id);
     if (a === 'price') return priceSheet(r, p => act({ action: 'price', id: r.id, price: p }, p ? 'ราคา ฿' + p : 'ลบราคาแล้ว'), true);
@@ -1038,7 +1042,9 @@ function fold(id, icon, title, body) {
     <summary class="mu"><i class="ti ${icon}"></i><span style="flex:1">${title}</span><i class="ti ti-chevron-down"></i></summary>${body}</details>`;
 }
 
-const STEP_TOP = { birthdayBonus: [1, 0, 100], referralBonus: [1, 0, 100], noshowWarn: [1, 1, 20], lostDays: [5, 7, 365] };
+const STEP_TOP = { birthdayBonus: [1, 0, 100], referralBonus: [1, 0, 100], noshowWarn: [1, 1, 20], lostDays: [5, 7, 365],
+  moveLimit: [1, 0, 20], moveCutoff: [30, 0, 1440], moveWarn: [1, 0, 50] };
+const hmText = m => Math.floor(m / 60) + '.' + String(m % 60).padStart(2, '0');   // 90 → 1.30
 function stepTop(f, v, unit) {
   return `<span class="stp"><button data-a="stepTop" data-f="${f}" data-d="-1">−</button><b style="min-width:44px">${v}</b><button data-a="stepTop" data-f="${f}" data-d="1">+</button></span><small class="mu" style="width:28px">${unit}</small>`;
 }
@@ -1059,7 +1065,7 @@ const SET_PAGES = {
   notice: ['ti-speakerphone', 'ประกาศถึงลูกค้า', s => s.notice.on && s.notice.text ? `<span class="au">เปิดอยู่</span> · ${esc(s.notice.text.slice(0, 24))}${s.notice.text.length > 24 ? '…' : ''}` : 'ปิดอยู่'],
   member: ['ti-medal', 'สมาชิกและรางวัล', s => `${s.tiers.length} ระดับ · ${s.rewards.length} รางวัล`],
   promo: ['ti-bolt', 'โปรโมชั่น', s => { const all = [s.birthdayOn, s.referralOn].concat(s.boosts.map(b => b.on !== false)); return `เปิด ${all.filter(Boolean).length} จาก ${all.length}`; }],
-  warn: ['ti-alert-triangle', 'การเตือน', s => `ไม่มา ${s.noshowWarn} ครั้ง · หายเกิน ${s.lostDays} วัน`],
+  warn: ['ti-alert-triangle', 'การเตือน', s => `ไม่มา ${s.noshowWarn} ครั้ง · เลื่อนเองได้ ${s.moveLimit || 'ไม่จำกัด'}${s.moveLimit ? ' ครั้ง' : ''} · หายเกิน ${s.lostDays} วัน`],
   share: ['ti-qrcode', 'QR และลิงก์ร้าน', () => 'ให้ลูกค้าสแกนหรือกดลิงก์เพื่อจองคิว'],
   push: ['ti-bell-ringing', 'แจ้งเตือนบนมือถือ', () => '<span id="pushsum">…</span>'],
   manual: ['ti-book', 'คู่มือการใช้งาน', () => 'วิธีใช้ทุกส่วนของหน้าช่าง'],
@@ -1244,6 +1250,11 @@ const PAGE_BODY = {
   warn: s => `
     <div class="row"><i class="ti ti-alert-triangle"></i><span>ขึ้นป้ายเตือนเมื่อไม่มาถึง</span>${stepTop('noshowWarn', s.noshowWarn, 'ครั้ง')}</div>
     <div class="mu" style="font-size:12px;padding:6px 0 12px">ไม่มา +1 · มาตัด −1 · ล้างเองได้ในบัตรสมาชิก</div>
+    <div class="mu" style="padding:16px 0 4px;color:var(--c-move) !important"><i class="ti ti-arrows-exchange"></i> ลูกค้าเลื่อนคิวเอง</div>
+    <div class="row"><i class="ti ti-repeat"></i><span>เลื่อนเองได้ต่อคิว</span>${stepTop('moveLimit', s.moveLimit || '∞', 'ครั้ง')}</div>
+    <div class="row"><i class="ti ti-clock-stop"></i><span>เลื่อน/ยกเลิกเองได้ถึง ก่อนคิว</span>${stepTop('moveCutoff', s.moveCutoff ? hmText(s.moveCutoff) : '–', 'ชม.')}</div>
+    <div class="row"><i class="ti ti-arrows-exchange"></i><span>ขึ้นป้าย "เลื่อนบ่อย" เมื่อถึง</span>${stepTop('moveWarn', s.moveWarn || 'ปิด', 'ครั้ง')}</div>
+    <div class="mu" style="font-size:12px;padding:6px 0 12px">ตั้ง 0 = ไม่จำกัด / ปิด · ครบแล้วลูกค้าต้องโทรหาร้าน · มาตัด 1 ครั้ง ค่าเลื่อน −1</div>
     <div class="row"><i class="ti ti-user-question"></i><span>นับเป็นลูกค้าที่หายไป เมื่อไม่มาเกิน</span>${stepTop('lostDays', s.lostDays, 'วัน')}</div>
     <div class="mu" style="font-size:12px;padding:6px 0">เฉพาะลูกค้าที่เคยมาอย่างน้อย 2 ครั้ง · ดูรายชื่อได้ในแท็บสมาชิก</div>`,
   share: () => `
@@ -1572,7 +1583,8 @@ async function memberSheet(phone) {
   const m = r.member;
   const info = [
     `มา ${m.visits} ครั้ง`,
-    m.noshow ? `<span style="color:${m.warn ? 'var(--warn)' : 'var(--mute)'}">ค่าเตือนไม่มา ${m.noshow}${m.warn ? ' ⚠' : ''}</span>` : '',
+    m.noshow ? `<span style="color:${m.warn ? 'var(--c-noshow)' : 'var(--mute)'}">ค่าเตือนไม่มา ${m.noshow}${m.warn ? ' ⚠' : ''}</span>` : '',
+    m.moves ? `<span style="color:${m.moveWarn ? 'var(--c-move)' : 'var(--mute)'}">เลื่อนเอง ${m.moves} ครั้ง${m.moveWarn ? ' ⚠' : ''}</span>` : '',
     m.birthMonth ? '🎂 ' + MONTHS[m.birthMonth - 1] : '',
     m.referredBy ? 'เพื่อนแนะนำ ' + esc(m.referredBy.slice(-4)) : ''
   ].filter(Boolean).join(' · ');
@@ -1587,6 +1599,7 @@ async function memberSheet(phone) {
       <button class="chip" data-a="merge"><i class="ti ti-arrows-join"></i> รวมบัญชี</button>
       <button class="chip" data-a="birth"><i class="ti ti-cake"></i> เดือนเกิด</button>
       ${m.noshow ? '<button class="chip" data-a="clearns"><i class="ti ti-eraser"></i> ล้างค่าเตือนไม่มา</button>' : ''}
+      ${m.moves ? '<button class="chip" data-a="clearmv"><i class="ti ti-eraser"></i> ล้างค่าเลื่อน</button>' : ''}
       <button class="chip" data-a="del" style="color:var(--warn)"><i class="ti ti-trash"></i> ลบข้อมูล</button>
     </div>
     <div class="mu" style="margin:16px 0 4px"><i class="ti ti-history"></i> ประวัติล่าสุด</div>
@@ -1604,6 +1617,8 @@ async function memberSheet(phone) {
       if (a === 'birth') return monthSheet(m.birthMonth, async v => done(await api('barberMemberEdit', m.phone, { birthMonth: v }).catch(() => null), 'บันทึกเดือนเกิดแล้ว'));
       if (a === 'clearns') return askConfirm('ล้างค่าเตือนไม่มาของ ' + m.name + '?', 'ล้างค่าเตือน', async () =>
         done(await api('barberMemberEdit', m.phone, { clearNoshow: true }).catch(() => null), 'ล้างค่าเตือนแล้ว'));
+      if (a === 'clearmv') return askConfirm('ล้างค่าเลื่อนของ ' + m.name + '?', 'ล้างค่าเลื่อน', async () =>
+        done(await api('barberMemberEdit', m.phone, { clearMoves: true }).catch(() => null), 'ล้างค่าเลื่อนแล้ว'));
       if (a === 'del') return askConfirm(`ลบข้อมูล ${m.name || m.phone}?`, 'ลบข้อมูล', () =>
         askConfirm('ยืนยันอีกครั้ง: ลบชื่อ เบอร์ และแต้มทั้งหมด กู้คืนไม่ได้', 'ลบถาวร', async () => {
           const x = await api('barberMemberDelete', m.phone).catch(() => null);
@@ -1751,7 +1766,8 @@ function memTags(r) {
   if (!m) return '';
   return `<span style="display:inline-flex;gap:5px;flex-wrap:wrap;margin-top:4px">${tierBadge({ idx: m.idx, count: m.count, name: m.tier })}
     ${m.gift ? '<span class="badge" style="background:var(--gold);color:var(--bg);border-color:var(--gold)"><i class="ti ti-gift"></i> แลกได้</span>' : ''}
-    ${m.warn ? '<span class="badge" style="border-color:var(--warn);color:var(--warn)"><i class="ti ti-alert-triangle"></i> เคยไม่มา</span>' : ''}</span>`;
+    ${m.warn ? '<span class="badge" style="border-color:var(--c-noshow);color:var(--c-noshow)"><i class="ti ti-alert-triangle"></i> เคยไม่มา</span>' : ''}
+    ${m.mv ? `<span class="badge" style="border-color:var(--c-move);color:var(--c-move)"><i class="ti ti-arrows-exchange"></i> เลื่อนบ่อย (${m.mv})</span>` : ''}</span>`;
 }
 
 function adjustSheet(m) {
@@ -1901,7 +1917,7 @@ const MANUAL = `
     <li>บัตรสมาชิก: แก้ชื่อ · เปลี่ยนเบอร์ · รวมบัญชี (ลูกค้ามี 2 เบอร์) · เดือนเกิด · ลบข้อมูลตามที่ลูกค้าขอ</li>
     <li>แลกผิด: กด "ยกเลิก" ที่รายการแลกในประวัติ (ได้เฉพาะของวันนี้) แต้มคืนครบ</li>
     <li>คิวที่ไม่มีเบอร์ กดเสร็จแล้วจะถามว่าให้แต้มใคร (เลือกลูกค้าประจำ / ใส่เบอร์ / ข้าม)</li>
-    <li>ป้ายบนคิว: <i class="ti ti-gift"></i> แต้มพอแลกรางวัล · <i class="ti ti-alert-triangle"></i> เคยไม่มาหลายครั้ง (มาตัด 1 ครั้งลดลง 1 · ล้างเองได้ในบัตรสมาชิก)</li>
+    <li>ป้ายบนคิว: <i class="ti ti-gift"></i> ทอง = แต้มพอแลกรางวัล · <i class="ti ti-alert-triangle" style="color:var(--c-noshow)"></i> แดง = เคยไม่มาหลายครั้ง · <i class="ti ti-arrows-exchange" style="color:var(--c-move)"></i> ส้ม = เลื่อนคิวเองบ่อย · <i class="ti ti-message-dots" style="color:var(--c-note)"></i> ฟ้า = ลูกค้าฝากข้อความ (ค่าเตือนลดลง 1 เมื่อมาตัด · ล้างเองได้ในบัตรสมาชิก)</li>
     <li>ลูกค้าขึ้นระดับ จะมีแถบทองแจ้งให้บอกลูกค้า</li>
     <li>แท็บสมาชิกด้านบน: สรุปเดือนนี้ และ "ลูกค้าที่หายไป" พร้อมปุ่มโทร</li>
   </ul>
