@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>๑๐ กันยา · ช่าง</title>
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon-192.png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png?v=2">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=2">
 <meta name="theme-color" content="#141210">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -215,6 +215,12 @@ body.tab-l .row.sel{background:var(--gold-bg);border-radius:10px;padding-left:10
 .dnav .dpick{border:1px solid var(--gold-line);border-radius:10px;padding:5px 11px;min-height:38px;font-size:16px;color:var(--gold);white-space:nowrap}
 .dnav .dpick .ti{font-size:16px;margin-right:3px}
 .dnav .back{font-size:13px;padding:6px 4px;color:var(--mute)}
+.lgph{width:72px;height:72px;border-radius:50%;border:1px dashed var(--gold-line);display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:13px;flex-shrink:0}
+.crop{position:relative;margin:0 auto 6px;overflow:hidden;border-radius:12px;background:#0C0B0A;touch-action:none;cursor:grab}
+.crop img{position:absolute;max-width:none;user-select:none;-webkit-user-drag:none;pointer-events:none}
+.cmask{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 2px var(--gold)}
+.cmask.circle{border-radius:50%;box-shadow:0 0 0 400px rgba(8,7,6,.62),inset 0 0 0 2px var(--gold)}
+.cmask.square{border-radius:22%;box-shadow:0 0 0 400px rgba(8,7,6,.62),inset 0 0 0 2px var(--gold)}
 .calg{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;text-align:center}
 .calg .h{font-size:13px;color:var(--mute);padding:4px 0}
 .calg button{border-radius:10px;padding:7px 0 4px;font-family:var(--serif);font-variant-numeric:lining-nums;font-size:20px;line-height:1.1;border:1px solid transparent}
@@ -531,6 +537,21 @@ function rewardList(rewards, points, clickable) {
   }).join('');
 }
 
+/*** ---------- โลโก้ร้าน (เก็บในเครื่อง โหลดใหม่เฉพาะตอนร้านเปลี่ยนรูป) ---------- ***/
+const LOGO = { ver: '', data: '', shape: 'circle' };
+async function ensureLogo(ver, shape) {
+  LOGO.shape = shape || 'circle';
+  if (!ver) { LOGO.ver = ''; LOGO.data = ''; return; }
+  if (LOGO.ver === ver && LOGO.data) return;
+  const c = store.get('k10_logo', null);
+  if (c && c.ver === ver && c.data) { LOGO.ver = ver; LOGO.data = c.data; return; }
+  try {
+    const r = await call('getLogo');
+    if (r && r.data) { LOGO.ver = r.ver; LOGO.data = r.data; store.set('k10_logo', { ver: r.ver, data: r.data }); }
+  } catch (e) {}
+}
+const logoTag = (px, extra) => LOGO.data ? `<img class="shoplogo" src="${LOGO.data}" alt="" style="width:${px}px;height:${px}px;border-radius:${LOGO.shape === 'square' ? Math.round(px * .22) + 'px' : '50%'};object-fit:cover;flex-shrink:0;${extra || ''}">` : '';
+
 // เงื่อนไขสมาชิกและรางวัล (สร้างจากค่าที่ร้านตั้งไว้)
 function termsHtml(t) {
   const tiers = t.tiers.slice().sort((a, b) => a.min - b.min), hd = (ic, x) => `<div class="tm-h"><i class="ti ti-${ic}"></i> ${x}</div>`;
@@ -539,7 +560,7 @@ function termsHtml(t) {
     t.birthdayBonus ? `เดือนเกิด: มาตัดครั้งแรกของเดือนเกิด +${t.birthdayBonus} แต้ม (ปีละครั้ง)` : '',
     t.referralBonus ? `ชวนเพื่อน: เพื่อนใหม่มาตัดครั้งแรก ได้คนละ +${t.referralBonus} แต้ม` : ''
   ].concat(t.boosts.map(b => `${days(b)} ${b.from}–${b.to} แต้ม ×${b.mult}`)).filter(Boolean);
-  return `<div class="tm">
+  return `<div class="tm">${logoTag(64, 'display:block;margin:0 auto 12px')}
     <div class="tm-t">เงื่อนไขสมาชิกและรางวัล</div>
     <div class="mu">สมัครอัตโนมัติด้วยเบอร์โทรเมื่อมาตัดครั้งแรก</div>
     ${hd('medal', 'ระดับสมาชิก')}
@@ -616,9 +637,10 @@ async function showLogin() {
   $('#nav').style.display = 'none';
   $('#app').className = 'wrap';
   const st = await call('barberStatus');
+  await ensureLogo(st.logoVer, st.logoShape);
   const first = !st.hasPin, t1 = first ? 'ตั้ง PIN สำหรับช่าง (4–8 หลัก)' : 'ใส่ PIN';
   $('#app').innerHTML = `<div id="pr" style="text-align:center;padding-top:36px">
-      <i class="ti ti-scissors au" style="font-size:26px"></i>
+      ${logoTag(64, 'display:block;margin:0 auto') || '<i class="ti ti-scissors au" style="font-size:26px"></i>'}
       <div class="sv brand" style="margin:8px 0 18px">${esc(st.shop)}</div>${padHtml(t1)}</div>`;
   let firstVal = '';
   bindPad($('#pr'), async (v, pad) => {
@@ -1075,23 +1097,33 @@ let qrCache = { url: '', png: '' };
 async function drawQr(url) {
   const img = $('#qr'), dl = $('#qrdl');
   if (!img) return;
-  if (qrCache.url !== url) {
+  if (qrCache.url !== url || qrCache.logo !== LOGO.ver + LOGO.shape) {
     if (typeof qrcode !== 'function') { img.replaceWith(Object.assign(document.createElement('div'), { className: 'mu', textContent: 'โหลดตัวสร้าง QR ไม่ได้' })); return; }
     try { await document.fonts.ready; } catch (e) {}
     const qr = qrcode(0, 'M');
     qr.addData(url); qr.make();
-    const n = qr.getModuleCount(), W = 720, H = 960, cell = Math.floor(520 / n), size = cell * n, x0 = (W - size) / 2, y0 = 210;
+    let lg = null;
+    if (LOGO.data) { lg = new Image(); lg.src = LOGO.data; try { await lg.decode(); } catch (e) { lg = null; } }
+    const top = lg ? 150 : 0;   // ที่ว่างสำหรับโลโก้
+    const n = qr.getModuleCount(), W = 720, H = 960 + top, cell = Math.floor(520 / n), size = cell * n, x0 = (W - size) / 2, y0 = 210 + top;
     const c = document.createElement('canvas'); c.width = W; c.height = H;
     const g = c.getContext('2d');
     g.fillStyle = '#F4EFE7'; g.fillRect(0, 0, W, H);
+    if (lg) {
+      const L = 150, lx = (W - L) / 2, ly = 50;
+      g.save(); g.beginPath();
+      if (LOGO.shape === 'square') { const r = 33; g.moveTo(lx + r, ly); g.arcTo(lx + L, ly, lx + L, ly + L, r); g.arcTo(lx + L, ly + L, lx, ly + L, r); g.arcTo(lx, ly + L, lx, ly, r); g.arcTo(lx, ly, lx + L, ly, r); }
+      else g.arc(W / 2, ly + L / 2, L / 2, 0, Math.PI * 2);
+      g.clip(); g.drawImage(lg, lx, ly, L, L); g.restore();
+    }
     g.fillStyle = '#1B1815'; g.textAlign = 'center';
-    g.font = '500 64px "Noto Serif Thai", Georgia, serif'; g.fillText('๑๐ กันยา', W / 2, 110);
+    g.font = '500 64px "Noto Serif Thai", Georgia, serif'; g.fillText('๑๐ กันยา', W / 2, 110 + top);
     g.fillStyle = '#FFFFFF'; g.fillRect(x0 - cell * 4, y0 - cell * 4, size + cell * 8, size + cell * 8);   // ขอบขาว 4 ช่องตามมาตรฐาน QR
     g.fillStyle = '#141210';
     for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (qr.isDark(r, k)) g.fillRect(x0 + k * cell, y0 + r * cell, cell, cell);
     g.fillStyle = '#8A6A3A'; g.font = '500 40px "IBM Plex Sans Thai", sans-serif';
     g.fillText('สแกนเพื่อจองคิว', W / 2, y0 + size + cell * 4 + 80);
-    qrCache = { url: url, png: c.toDataURL('image/png') };
+    qrCache = { url: url, logo: LOGO.ver + LOGO.shape, png: c.toDataURL('image/png') };
   }
   img.src = qrCache.png; dl.href = qrCache.png;
 }
@@ -1138,6 +1170,7 @@ async function showSettings(page) {
   B.setPage = page || '';
   $('#app').innerHTML = '<div class="load"><i class="ti ti-scissors"></i></div>';
   try { B.setSaved = await api('barberSettings'); } catch (e) { return; }
+  await ensureLogo(B.setSaved.logoVer, B.setSaved.logoShape);
   B.set = clone(B.setSaved);
   renderSettings();
 }
@@ -1186,6 +1219,7 @@ function afterPage(pg, s) {
   if (pg === 'share') drawQr(CUSTOMER_URL);
   if (pg === 'push') renderPush();
   if (pg === 'notice') $('#ntx').oninput = e => { $('#ntc').textContent = e.target.value.length; };
+  if (pg === 'shop') $('#lgfile').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) cropSheet(f); };
   if (pg === 'shop') $('#sh').onchange = e => {
     readSettings();
     const v = e.target.value;
@@ -1231,7 +1265,14 @@ const PAGE_BODY = {
     const slots = [15, 20, 30, 40, 45, 60, 90];
     if (slots.indexOf(s.slotMin) < 0) slots.push(s.slotMin);
     return `
-    <div class="mu" style="padding:4px 0 4px"><i class="ti ti-clock"></i> เวลาเปิด–ปิด · สวิตช์ = เปิด/หยุดวันนั้น</div>
+    <div class="row" style="gap:14px;padding-top:4px">${logoTag(72) || '<span class="lgph">โลโก้</span>'}
+      <span style="flex:1">โลโก้ร้าน<span class="mu" style="display:block">แสดงบนหน้าจอง ตั๋ว QR และหน้าใส่ PIN · บันทึกทันที</span></span></div>
+    <div class="chips" style="grid-template-columns:1fr 1fr;margin:10px 0">
+      <button class="chip" data-a="lgpick"><i class="ti ti-photo"></i> ${LOGO.data ? 'เปลี่ยนรูป' : 'เลือกรูป'}</button>
+      ${LOGO.data ? '<button class="chip" data-a="lgdel" style="color:var(--c-noshow)"><i class="ti ti-trash"></i> ลบโลโก้</button>' : ''}
+      ${LOGO.data ? ['circle', 'square'].map(k => `<button class="chip ${LOGO.shape === k ? 'on' : ''}" data-a="lgshape" data-s="${k}">${k === 'circle' ? '● วงกลม' : '■ มุมมน'}</button>`).join('') : ''}</div>
+    <input type="file" id="lgfile" accept="image/*" style="display:none">
+    <div class="mu" style="padding:12px 0 4px"><i class="ti ti-clock"></i> เวลาเปิด–ปิด · สวิตช์ = เปิด/หยุดวันนั้น</div>
     ${[1, 2, 3, 4, 5, 6, 0].map(n => { const w = s.week[n]; return `<div class="row wk ${w.on ? '' : 'off'}"><span class="d">${WD[n]}</span>
       ${w.on ? `<select class="wsel" data-d="${n}" data-k="open">${timeOpts(w.open)}</select><span class="mu">–</span><select class="wsel" data-d="${n}" data-k="close">${timeOpts(w.close)}</select>`
         : `<span class="mu" style="flex:1">หยุดประจำ</span><input type="hidden" class="wsel" data-d="${n}" data-k="open" value="${w.open}"><input type="hidden" class="wsel" data-d="${n}" data-k="close" value="${w.close}">`}
@@ -1367,6 +1408,58 @@ async function saveSet(btn) {
 let promoT;
 function savePromoSoon() { renderSettings(); clearTimeout(promoT); promoT = setTimeout(() => saveSet(), 700); }
 
+// โลโก้: บันทึกทันที (ไม่รอปุ่มบันทึกของหน้าร้าน)
+async function saveLogo(data, shape, del, msg) {
+  const r = await api('barberSetLogo', data, shape, del).catch(() => null);
+  if (!r) return;
+  if (!r.ok) return toast(r.msg);
+  B.setSaved.logoVer = B.set.logoVer = r.ver; B.setSaved.logoShape = B.set.logoShape = r.shape;
+  if (data) { LOGO.ver = r.ver; LOGO.data = data; store.set('k10_logo', { ver: r.ver, data: data }); }
+  if (del) { LOGO.ver = ''; LOGO.data = ''; store.del('k10_logo'); }
+  LOGO.shape = r.shape;
+  closeSheet(); renderSettings(); toast(msg);
+}
+// เลือกรูปแล้ว: ลากจัดตำแหน่ง + ซูม → ย่อเป็น 256×256
+function cropSheet(file) {
+  const url = URL.createObjectURL(file), img = new Image();
+  img.onerror = () => toast('เปิดรูปนี้ไม่ได้');
+  img.onload = () => {
+    const V = Math.min(260, innerWidth - 80), base = V / Math.min(img.width, img.height);
+    let z = 1, x = 0, y = 0;
+    const sh = openSheet(`<h3>จัดโลโก้</h3>
+      <div class="crop" id="cb" style="width:${V}px;height:${V}px"><img id="ci" src="${url}" alt=""><div class="cmask ${LOGO.shape}"></div></div>
+      <div class="mu" style="text-align:center">ลากรูปเพื่อจัดตำแหน่ง</div>
+      <div class="row" style="border:0"><i class="ti ti-zoom-out mu"></i><input type="range" id="cz" min="1" max="4" step="0.01" value="1" style="flex:1;accent-color:var(--gold)"><i class="ti ti-zoom-in mu"></i></div>
+      <button class="btn" data-a="use">ใช้รูปนี้</button>`, async a => {
+        if (a !== 'use') return;
+        const O = 256, k = O / V, s = base * z * k, c = document.createElement('canvas');
+        c.width = c.height = O;
+        const g = c.getContext('2d');
+        const put = () => g.drawImage(img, (O - img.width * s) / 2 + x * k, (O - img.height * s) / 2 + y * k, img.width * s, img.height * s);
+        put();
+        let data = c.toDataURL('image/png');
+        if (data.length > 120000) { g.fillStyle = '#141210'; g.fillRect(0, 0, O, O); put(); data = c.toDataURL('image/jpeg', .88); }   // รูปถ่าย → JPEG ให้เล็กลง
+        $('[data-a=use]', sh).classList.add('busy');
+        await saveLogo(data, LOGO.shape, false, 'บันทึกโลโก้แล้ว');
+        URL.revokeObjectURL(url);
+      });
+    const ci = $('#ci', sh), cb = $('#cb', sh);
+    const draw = () => {
+      const s = base * z, w = img.width * s, h = img.height * s, mx = (w - V) / 2, my = (h - V) / 2;
+      x = Math.max(-mx, Math.min(mx, x)); y = Math.max(-my, Math.min(my, y));
+      Object.assign(ci.style, { width: w + 'px', height: h + 'px', left: (V - w) / 2 + x + 'px', top: (V - h) / 2 + y + 'px' });
+    };
+    let p0 = null;
+    cb.onpointerdown = e => { p0 = { px: e.clientX, py: e.clientY, x, y }; cb.setPointerCapture(e.pointerId); };
+    cb.onpointermove = e => { if (!p0) return; x = p0.x + e.clientX - p0.px; y = p0.y + e.clientY - p0.py; draw(); };
+    cb.onpointerup = cb.onpointercancel = () => { p0 = null; };
+    ['touchstart', 'touchmove'].forEach(t => cb.addEventListener(t, e => e.stopPropagation(), { passive: true }));   // ไม่ให้หน้าต่างเลื่อนปิดตอนลากรูป
+    $('#cz', sh).oninput = e => { z = +e.target.value; draw(); };
+    draw();
+  };
+  img.src = url;
+}
+
 // แก้ช่วงพักประจำ (ยังไม่บันทึกจนกด "บันทึก" ในหน้าร้าน)
 function breakSheet(i) {
   const s = B.set, isNew = i < 0;
@@ -1439,6 +1532,9 @@ $('#app').addEventListener('click', async e => {
   if (a === 'icon') { const r = s.rewards[+b.dataset.i]; r.icon = ICONS[(ICONS.indexOf(r.icon) + 1) % ICONS.length]; return renderSettings(); }
   if (a === 'rdel') { s.rewards.splice(+b.dataset.i, 1); return renderSettings(); }
   if (a === 'hdel') { s.holidays = s.holidays.filter(h => h !== b.dataset.h); return renderSettings(); }
+  if (a === 'lgpick') return $('#lgfile').click();
+  if (a === 'lgshape') return saveLogo(null, b.dataset.s, false, 'เปลี่ยนรูปทรงแล้ว');
+  if (a === 'lgdel') return askConfirm('ลบโลโก้ร้าน?', 'ลบโลโก้', () => saveLogo('', 'circle', true, 'ลบโลโก้แล้ว'), 'ไม่ลบ');
   if (a === 'wtog') { const w = s.week[+b.dataset.n]; w.on = !w.on; return renderSettings(); }
   if (a === 'wsame') { const src = s.week[[1, 2, 3, 4, 5, 6, 0].find(n => s.week[n].on)]; s.week.forEach(w => { if (w.on) { w.open = src.open; w.close = src.close; } }); toast('ตั้งเวลาเดียวกันแล้ว · กดบันทึก'); return renderSettings(); }
   if (a === 'ktog') { const k = s.breaks[+b.dataset.i]; k.on = k.on === false; return renderSettings(); }
@@ -2018,7 +2114,7 @@ const MANUAL = `
   </ul>
   <h4><i class="ti ti-adjustments-horizontal"></i> ตั้งค่า</h4>
   <ul>
-    <li><b>ร้าน:</b> เวลาเปิด–ปิดแยกรายวัน (สวิตช์ = เปิด/หยุดวันนั้น · ปุ่มใช้เวลาเดียวกันทุกวัน) · ช่วงพักประจำ · คิวละกี่นาที · จองล่วงหน้ากี่วัน · วันหยุดพิเศษ · เบอร์ร้าน / แผนที่</li>
+    <li><b>ร้าน:</b> โลโก้ร้าน (เลือกรูป → ลากจัด/ซูม · เลือกวงกลมหรือมุมมน · บันทึกทันที) · เวลาเปิด–ปิดแยกรายวัน (สวิตช์ = เปิด/หยุดวันนั้น · ปุ่มใช้เวลาเดียวกันทุกวัน) · ช่วงพักประจำ · คิวละกี่นาที · จองล่วงหน้ากี่วัน · วันหยุดพิเศษ · เบอร์ร้าน / แผนที่</li>
     <li>ตั้งวันหยุดทับวันที่มีคิว ระบบจะบอกจำนวนคิวที่ต้องโทรแจ้งลูกค้า</li>
     <li><b>ราคา:</b> ปุ่มราคาตอนกดเสร็จ · <b>ประกาศถึงลูกค้า:</b> ข้อความบนหน้าจอง ตั้งวันหมดได้</li>
     <li><b>สมาชิกและรางวัล:</b> ระดับ / รางวัล ใช้ปุ่ม − + · แตะไอคอนรางวัลเพื่อเปลี่ยนรูป · ข้อความเพิ่มเติมในเงื่อนไข</li>

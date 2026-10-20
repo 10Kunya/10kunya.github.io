@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>๑๐ กันยา · จองคิว</title>
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="../icon-192.png">
-<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="icon" href="../icon-192.png?v=2">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png?v=2">
 <meta name="theme-color" content="#141210">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -341,6 +341,21 @@ function rewardList(rewards, points, clickable) {
   }).join('');
 }
 
+/*** ---------- โลโก้ร้าน (เก็บในเครื่อง โหลดใหม่เฉพาะตอนร้านเปลี่ยนรูป) ---------- ***/
+const LOGO = { ver: '', data: '', shape: 'circle' };
+async function ensureLogo(ver, shape) {
+  LOGO.shape = shape || 'circle';
+  if (!ver) { LOGO.ver = ''; LOGO.data = ''; return; }
+  if (LOGO.ver === ver && LOGO.data) return;
+  const c = store.get('k10_logo', null);
+  if (c && c.ver === ver && c.data) { LOGO.ver = ver; LOGO.data = c.data; return; }
+  try {
+    const r = await call('getLogo');
+    if (r && r.data) { LOGO.ver = r.ver; LOGO.data = r.data; store.set('k10_logo', { ver: r.ver, data: r.data }); }
+  } catch (e) {}
+}
+const logoTag = (px, extra) => LOGO.data ? `<img class="shoplogo" src="${LOGO.data}" alt="" style="width:${px}px;height:${px}px;border-radius:${LOGO.shape === 'square' ? Math.round(px * .22) + 'px' : '50%'};object-fit:cover;flex-shrink:0;${extra || ''}">` : '';
+
 // เงื่อนไขสมาชิกและรางวัล (สร้างจากค่าที่ร้านตั้งไว้)
 function termsHtml(t) {
   const tiers = t.tiers.slice().sort((a, b) => a.min - b.min), hd = (ic, x) => `<div class="tm-h"><i class="ti ti-${ic}"></i> ${x}</div>`;
@@ -349,7 +364,7 @@ function termsHtml(t) {
     t.birthdayBonus ? `เดือนเกิด: มาตัดครั้งแรกของเดือนเกิด +${t.birthdayBonus} แต้ม (ปีละครั้ง)` : '',
     t.referralBonus ? `ชวนเพื่อน: เพื่อนใหม่มาตัดครั้งแรก ได้คนละ +${t.referralBonus} แต้ม` : ''
   ].concat(t.boosts.map(b => `${days(b)} ${b.from}–${b.to} แต้ม ×${b.mult}`)).filter(Boolean);
-  return `<div class="tm">
+  return `<div class="tm">${logoTag(64, 'display:block;margin:0 auto 12px')}
     <div class="tm-t">เงื่อนไขสมาชิกและรางวัล</div>
     <div class="mu">สมัครอัตโนมัติด้วยเบอร์โทรเมื่อมาตัดครั้งแรก</div>
     ${hd('medal', 'ระดับสมาชิก')}
@@ -393,6 +408,7 @@ async function load(except) {
     return false;
   }
   // ตั๋วที่ร้านยกเลิกให้ (ลูกค้ายกเลิกเองจะถูกลบออกจากเครื่องไปก่อนแล้ว) → แจ้งครั้งเดียว
+  await ensureLogo(S.d.logoVer, S.d.logoShape);
   S.notice = (S.d.cancelled || []).slice();
   store.set('k10_tickets', S.d.tickets.map(t => t.token));
   S.loadedAt = Date.now();
@@ -455,8 +471,8 @@ function showBook(resched, forOther) {
   const d = S.d;
   $('#app').innerHTML = `
     <div class="head" style="align-items:flex-start">
-      <div><div class="sv brand">${esc(d.shop)}</div>
-      <div class="mu"><span id="hrs">${esc(d.open)} – ${esc(d.close)}</span> · ${esc(closedText(d.closedDays))}</div></div>
+      <div style="display:flex;align-items:center;gap:12px;min-width:0">${logoTag(48)}<div><div class="sv brand">${esc(d.shop)}</div>
+      <div class="mu"><span id="hrs">${esc(d.open)} – ${esc(d.close)}</span> · ${esc(closedText(d.closedDays))}</div></div></div>
       ${S.resched ? '' : `<span style="display:flex;gap:14px"><button id="hlp" class="mu" style="font-size:13px;text-align:center"><i class="ti ti-help-circle au" style="font-size:22px"></i><br>วิธีใช้</button>
         <button id="mem" class="mu" style="font-size:13px;text-align:center"><i class="ti ti-id-badge-2 au" style="font-size:22px"></i><br>สมาชิก</button></span>`}
     </div>
@@ -709,7 +725,7 @@ function showTickets(focus) {
   $('#app').innerHTML = shopNoteHtml() + noticeHtml() + d.tickets.map(t => `
     <div class="card" style="margin-bottom:16px${focus && focus !== t.token ? ';opacity:.75' : ''}">
       <div class="tk-top">
-        <i class="ti ti-scissors au" style="font-size:20px"></i>
+        ${logoTag(46, 'display:block;margin:0 auto') || '<i class="ti ti-scissors au" style="font-size:20px"></i>'}
         <div class="sv" style="font-size:19px;margin-top:6px">${esc(d.shop)}</div>
         <div class="sv au tk-time">${esc(t.time)}</div>
         <div class="mu">${dLong(t.date)}</div>
@@ -856,7 +872,7 @@ const isInApp = () => /Line\/|FBAN|FBAV|FB_IAB|Instagram|TikTok|Messenger/i.test
 // closable = ใต้ตั๋ว (กด ✕ แล้วไม่ขึ้นอีก) · หน้าสมาชิกแสดงเสมอ
 function a2hsHtml(closable) {
   if (isStandalone() || (closable && store.get('k10_a2hs_x', 0))) return '';
-  return `<div class="a2hs" role="button" tabindex="0" data-hs="1"><span class="ic"><i class="ti ti-scissors"></i></span>
+  return `<div class="a2hs" role="button" tabindex="0" data-hs="1"><span class="ic sv" style="font-size:17px">๑๐</span>
     <span style="flex:1">เพิ่มไอคอนร้านลงหน้าจอ<span class="mu" style="display:block">ครั้งหน้ากดจองได้ทันที</span></span>
     ${closable ? '<button class="x" data-hsx="1" aria-label="ไม่ต้องแสดงอีก"><i class="ti ti-x"></i></button>' : '<i class="ti ti-chevron-right mu"></i>'}</div>`;
 }
