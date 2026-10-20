@@ -312,6 +312,8 @@ body.tab-p .k b{font-size:34px}
 body.tab-l .sum{display:grid;grid-template-columns:minmax(300px,1fr) 1.3fr;gap:36px;align-items:start}
 body.tab-l .sum > div + div{margin-top:0 !important}
 body.tab-l .k b{font-size:34px}
+.ppbox{background:#fff;border-radius:16px;padding:10px;display:inline-block;margin-top:6px}
+.ppbox img{display:block;width:min(240px,62vw);height:auto;image-rendering:pixelated}
 .numd{font-family:var(--serif);font-variant-numeric:lining-nums;font-size:40px;color:var(--gold);text-align:center;min-height:56px;border-bottom:1px solid var(--line2);margin-bottom:14px}
 .npad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .npad button{border:1px solid var(--line2);border-radius:12px;padding:12px 0;font-family:var(--serif);font-variant-numeric:lining-nums;font-size:24px}
@@ -1015,11 +1017,17 @@ function rowSheet(r) {
   else acts =
     (r.phone ? `<a class="act" href="tel:${esc(r.phone)}"><i class="ti ti-phone"></i>${esc(r.phone)}</a>` : '') +
     (r.status === 'done' ? `<button class="act" data-a="price"><i class="ti ti-receipt"></i>${r.price ? 'ราคา <span class="sv au" style="font-size:19px">฿' + r.price + '</span> · แตะเพื่อแก้' : 'ใส่ราคา'}</button>` : '') +
+    (r.status === 'done' && r.price ? `<button class="act" data-a="paysw"><i class="ti ti-${r.pay === 'transfer' ? 'qrcode' : 'cash'}"></i>${r.pay ? (r.pay === 'cash' ? 'จ่ายเงินสด' : 'จ่ายโอน') + ' · แตะเพื่อเปลี่ยนเป็น' + (r.pay === 'cash' ? 'โอน' : 'เงินสด') : 'ยังไม่ระบุวิธีจ่าย · แตะเพื่อเลือก'}</button>` : '') +
     '<button class="act" data-a="booked"><i class="ti ti-arrow-back-up"></i>กลับเป็นรอคิว</button>';
   const note = r.note ? `<div class="pq"><i class="ti ti-message-dots" style="color:var(--c-note)"></i> ${esc(r.note)}</div>` : '';
   openSheet(head + memTags(r) + note + acts, a => {
     if (a === 'done') return doneFlow(r.id);
     if (a === 'price') return priceSheet(r, p => act({ action: 'price', id: r.id, price: p }, p ? 'ราคา ฿' + p : 'ลบราคาแล้ว'), true);
+    if (a === 'paysw') {
+      if (r.pay) { const to = r.pay === 'cash' ? 'transfer' : 'cash'; return act({ action: 'price', id: r.id, pay: to }, to === 'cash' ? 'เปลี่ยนเป็นเงินสดแล้ว' : 'เปลี่ยนเป็นโอนแล้ว'); }
+      return stackSheet('<h3>วิธีจ่าย</h3><div class="chips" style="grid-template-columns:1fr 1fr"><button class="chip" data-a="cash"><i class="ti ti-cash"></i> เงินสด</button><button class="chip" data-a="transfer"><i class="ti ti-qrcode"></i> โอน</button></div>',
+        x => act({ action: 'price', id: r.id, pay: x }, 'บันทึกวิธีจ่ายแล้ว'));
+    }
     if (a === 'move') return moveSheet(r, B.d.date);
     if (a === 'cancel') return askConfirm(`ยกเลิกคิว ${r.time} ${r.name}?`, 'ยกเลิกคิว', () => act({ action: 'cancel', id: r.id }, 'ยกเลิกแล้ว'));
     act({ action: a, id: r.id }, { done: 'เสร็จแล้ว', noshow: 'บันทึกว่าไม่มา', unblock: 'เปิดรับคิวแล้ว', booked: 'กลับเป็นรอคิวแล้ว' }[a]);
@@ -1198,6 +1206,7 @@ const clone = o => JSON.parse(JSON.stringify(o));
 const SET_PAGES = {
   shop: ['ti-building-store', 'ร้าน', s => `${s.open}–${s.close} · คิวละ ${s.slotMin} นาที · ${closedText(s.closedDays)}${s.breaks.some(b => b.on !== false) ? ' · มีช่วงพัก' : ''}`],
   price: ['ti-receipt', 'ราคา', s => s.prices.length ? s.prices.map(v => '฿' + v).join(' · ') : 'ยังไม่ได้ตั้ง'],
+  pay: ['ti-qrcode', 'การรับเงิน', s => s.payment.promptpay ? 'พร้อมเพย์ ' + maskPP(s.payment.promptpay) + ' · QR ขึ้นหลังเลือกราคา' : 'ยังไม่ตั้งพร้อมเพย์'],
   notice: ['ti-speakerphone', 'ประกาศถึงลูกค้า', s => s.notice.on && s.notice.text ? `<span class="au">เปิดอยู่</span> · ${esc(s.notice.text.slice(0, 24))}${s.notice.text.length > 24 ? '…' : ''}` : 'ปิดอยู่'],
   member: ['ti-medal', 'สมาชิกและรางวัล', s => `${s.tiers.length} ระดับ · ${s.rewards.length} รางวัล`],
   promo: ['ti-bolt', 'โปรโมชั่น', s => { const all = [s.birthdayOn, s.referralOn].concat(s.boosts.map(b => b.on !== false)); return `เปิด ${all.filter(Boolean).length} จาก ${all.length}`; }],
@@ -1207,7 +1216,7 @@ const SET_PAGES = {
   manual: ['ti-book', 'คู่มือการใช้งาน', () => 'วิธีใช้ทุกส่วนของหน้าช่าง'],
   account: ['ti-lock', 'บัญชีช่าง', () => 'เปลี่ยน PIN · ชีตข้อมูล · ออกจากระบบ']
 };
-const EDIT_PAGES = ['shop', 'price', 'notice', 'member', 'warn'];   // หน้าที่ต้องกด "บันทึก" (โปรโมชั่นบันทึกทันที)
+const EDIT_PAGES = ['shop', 'price', 'pay', 'notice', 'member', 'warn'];   // หน้าที่ต้องกด "บันทึก" (โปรโมชั่นบันทึกทันที)
 
 async function showSettings(page) {
   B.view = 'set'; navOn('set');
@@ -1344,6 +1353,18 @@ const PAGE_BODY = {
     <div class="mu" style="margin-bottom:12px">ปุ่มราคาที่ขึ้นตอนกด "เสร็จ" · แตะ ✕ เพื่อลบ</div>
     <div>${s.prices.map((v, i) => `<span class="pchip">${v}<button data-a="pdel" data-i="${i}" aria-label="ลบราคานี้"><i class="ti ti-x"></i></button></span>`).join('')}</div>
     <button class="mu" data-a="padd" style="padding:6px 0"><i class="ti ti-plus"></i> เพิ่มราคา</button>`,
+  pay: s => `
+    <div class="mu" style="margin-bottom:6px">ฝั่งช่างเท่านั้น ลูกค้าไม่เห็น · กดเสร็จ → เลือกราคา → QR พร้อมยอดขึ้นให้ลูกค้าสแกน</div>
+    <div class="mu" style="padding:10px 0 0"><i class="ti ti-qrcode"></i> พร้อมเพย์</div>
+    <div class="field"><i class="ti ti-device-mobile"></i><input id="ppid" inputmode="numeric" maxlength="17" placeholder="เบอร์มือถือ หรือเลขบัตรประชาชน ที่ผูกพร้อมเพย์" value="${esc(s.payment.promptpay)}"></div>
+    <div class="field"><i class="ti ti-user"></i><input id="ppname" maxlength="60" placeholder="ชื่อบัญชี (แสดงใต้ QR ให้ลูกค้าเช็ก)" value="${esc(s.payment.accName)}"></div>
+    <div class="mu" style="padding:16px 0 0"><i class="ti ti-building-bank"></i> บัญชีธนาคาร (สำรอง ไว้ตอบลูกค้า)</div>
+    <div class="field"><i class="ti ti-building-bank"></i><input id="bkname" maxlength="40" placeholder="ธนาคาร" value="${esc(s.payment.bankName)}"></div>
+    <div class="field"><i class="ti ti-hash"></i><input id="bkacc" inputmode="numeric" maxlength="20" placeholder="เลขบัญชี" value="${esc(s.payment.bankAcc)}"></div>
+    ${B.setSaved.payment.promptpay ? '<button class="btn line" data-a="ppshow" style="margin-top:16px"><i class="ti ti-qrcode"></i> เปิด QR ไม่ระบุยอด</button>' : ''}
+    ${B.setSaved.payment.bankAcc ? `<div class="card" style="padding:12px 14px;margin-top:12px;border-color:var(--line2)"><div class="mu">บัญชีสำรอง</div>${esc(B.setSaved.payment.bankName)} · <span class="sv au" style="font-size:19px">${esc(B.setSaved.payment.bankAcc)}</span>
+      ${B.setSaved.payment.accName ? `<div class="mu">${esc(B.setSaved.payment.accName)}</div>` : ''}</div>` : ''}
+    <div class="mu" style="margin-top:12px">เงินเข้าหรือยัง ดูจากแจ้งเตือนในแอปธนาคารของร้าน แล้วกด "ได้รับเงินโอนแล้ว"</div>`,
   notice: s => `
     <div class="row"><i class="ti ti-speakerphone"></i><span>แสดงบนหน้าลูกค้า</span>${sw(s.notice.on, 'data-a="ntog"')}</div>
     <textarea id="ntx" rows="4" maxlength="200" placeholder="เช่น หยุดพิเศษ 23 ต.ค. เปิดปกติ 24 ต.ค." style="margin-top:14px">${esc(s.notice.text)}</textarea>
@@ -1426,6 +1447,7 @@ const PAGE_BODY = {
 function readSettings() {
   const s = B.set, v = id => $(id) ? $(id).value : null;
   if ($('#mnote')) s.memberNote = v('#mnote').trim();
+  if ($('#ppid')) s.payment = { promptpay: v('#ppid').replace(/\D/g, ''), accName: v('#ppname').trim(), bankName: v('#bkname').trim(), bankAcc: v('#bkacc').trim() };
   if ($('#ntx')) s.notice = { on: s.notice.on, text: v('#ntx').trim(), until: v('#nun') || '' };
   document.querySelectorAll('.wsel').forEach(el => { s.week[+el.dataset.d][el.dataset.k] = el.value; });
   if ($('#ss')) { s.slotMin = +v('#ss'); s.phone = v('#sp').trim(); s.mapUrl = v('#sm').trim(); }
@@ -1577,6 +1599,7 @@ $('#app').addEventListener('click', async e => {
   if (a === 'rdel') { s.rewards.splice(+b.dataset.i, 1); return renderSettings(); }
   if (a === 'hdel') { s.holidays = s.holidays.filter(h => h !== b.dataset.h); return renderSettings(); }
   if (a === 'lgpick') return $('#lgfile').click();
+  if (a === 'ppshow') return paySheet(0, null, B.setSaved.payment.promptpay, B.setSaved.payment.accName);
   if (a === 'lgshape') return saveLogo(null, b.dataset.s, false, 'เปลี่ยนรูปทรงแล้ว');
   if (a === 'lgdel') return askConfirm('ลบโลโก้ร้าน?', 'ลบโลโก้', () => saveLogo('', 'circle', true, 'ลบโลโก้แล้ว · กลับเป็น ๑๐'), 'ไม่ลบ');
   if (a === 'wtog') { const w = s.week[+b.dataset.n]; w.on = !w.on; return renderSettings(); }
@@ -1663,6 +1686,8 @@ function renderSummary() {
   const cards = [
     money ? k('รายได้', '฿' + compact(c.revenue), dl('revenue', true)) : '',
     money ? k('เฉลี่ย/หัว', '฿' + compact(c.perHead), dl('perHead', false, true)) : '',
+    c.cash || c.transfer ? k('เงินสด', '฿' + compact(c.cash), `<small class="mu">${Math.round(c.cash / c.revenue * 100)}%</small>`) : '',
+    c.cash || c.transfer ? k('โอน', '฿' + compact(c.transfer), `<small class="mu">${Math.round(c.transfer / c.revenue * 100)}%</small>`) : '',
     k('ลูกค้า', compact(c.customers), dl('customers', true)),
     d.range === 'd1' ? '' : k('เฉลี่ย/วัน', r1(c.avg), dl('avg')),
     k('ลูกค้าใหม่', compact(c.newC), dl('newC')),
@@ -1893,7 +1918,9 @@ function mergeSheet(m) {
 async function doneFlow(id) {
   const r = B.d.rows.find(x => x.id === id);
   if (!r) return;
-  const finish = extra => priceSheet(r, p => act(Object.assign({ action: 'done', id: id, price: p }, extra), 'เสร็จแล้ว' + (p ? ' · ฿' + p : '')));
+  const save = (extra, p, pay) => act(Object.assign({ action: 'done', id: id, price: p, pay: pay || '' }, extra),
+    'เสร็จแล้ว' + (p ? ' · ฿' + p : '') + (pay ? (pay === 'cash' ? ' เงินสด' : ' โอน') : ''));
+  const finish = extra => priceSheet(r, p => B.d.pp && p ? paySheet(p, pay => save(extra, p, pay)) : save(extra, p, ''));
   if (r.phone) return finish({});
   if (!B.recent) B.recent = (await api('barberMembers', '').catch(() => [])).slice(0, 8);
   const st = { nn: '', np: '' };
@@ -1930,6 +1957,44 @@ function priceSheet(r, onPick, edit) {
       if (a === 'p') return onPick(+b.dataset.v);
       if (a === 'skip') return edit && !r.price ? popSheet() : onPick(0);
       if (a === 'other') return numSheet('ราคาอื่น', v => onPick(v));
+    });
+  sh.classList.add('big');
+}
+
+// QR พร้อมเพย์ (มาตรฐาน EMVCo ที่แอปธนาคารไทยอ่านได้) · amount = 0 คือไม่ระบุยอด
+function ppPayload(id, amount) {
+  const f = (t, v) => t + String(v.length).padStart(2, '0') + v;
+  id = String(id).replace(/\D/g, '');
+  const acc = id.length === 10 ? f('01', '0066' + id.slice(1)) : id.length === 13 ? f('02', id) : f('03', id);
+  let s = f('00', '01') + f('01', amount ? '12' : '11') + f('29', f('00', 'A000000677010111') + acc) + f('58', 'TH') + f('53', '764') +
+    (amount ? f('54', (+amount).toFixed(2)) : '') + '6304';
+  let crc = 0xFFFF;
+  for (let i = 0; i < s.length; i++) {
+    crc ^= s.charCodeAt(i) << 8;
+    for (let j = 0; j < 8; j++) crc = crc & 0x8000 ? (crc << 1) ^ 0x1021 : crc << 1;
+    crc &= 0xFFFF;
+  }
+  return s + crc.toString(16).toUpperCase().padStart(4, '0');
+}
+function ppQrImg(id, amount) {
+  if (typeof qrcode !== 'function') return '<div class="mu">โหลดตัวสร้าง QR ไม่ได้</div>';
+  const q = qrcode(0, 'M'); q.addData(ppPayload(id, amount)); q.make();
+  return q.createImgTag(6, 12).replace('<img', '<img class="ppqr" alt="QR พร้อมเพย์"');
+}
+const maskPP = id => id ? (id.length === 10 ? id.slice(0, 3) + '-xxx-' + id.slice(6) : 'xxxx' + id.slice(-4)) : '';
+// หน้าจอรับเงิน: QR พร้อมยอด + ปุ่มได้รับเงินโอน / เงินสด (onPick ไม่ส่งมา = ดูอย่างเดียว)
+function paySheet(amount, onPick, pp, name) {
+  pp = pp || B.d.pp; name = name != null ? name : B.d.ppName;
+  const sh = stackSheet(`<div style="text-align:center">
+    <div class="mu">สแกนจ่าย · พร้อมเพย์</div>
+    ${amount ? `<div class="sv au" style="font-size:46px;line-height:1.2">฿${amount}</div>` : '<div class="mu" style="margin:6px 0">ไม่ระบุยอด · ลูกค้าใส่ยอดเอง</div>'}
+    <div class="ppbox">${ppQrImg(pp, amount)}</div>
+    <div class="mu" style="margin:8px 0 14px">${esc(name || '๑๐ กันยา')} · พร้อมเพย์ ${esc(maskPP(pp))}</div>
+    ${onPick ? `<button class="btn" data-a="tr"><i class="ti ti-check"></i> ได้รับเงินโอนแล้ว</button>
+      <button class="btn line" data-a="cash" style="margin-top:10px"><i class="ti ti-cash"></i> ลูกค้าจ่ายเงินสด</button>
+      <div class="mu" style="margin-top:10px">ปิดหน้าต่าง = ยังไม่บันทึก</div>` : ''}</div>`, a => {
+      if (a === 'tr') onPick('transfer');
+      if (a === 'cash') onPick('cash');
     });
   sh.classList.add('big');
 }
@@ -2126,6 +2191,8 @@ const MANUAL = `
   <ul>
     <li>กดเสร็จ → แตะปุ่มราคา (กรอบทอง = ราคาที่ลูกค้าคนนี้จ่ายครั้งก่อน) · "อื่น ๆ" กดตัวเลขเอง · "ข้าม" ไม่ใส่ราคา</li>
     <li>แก้ราคา: แตะคิวที่เสร็จแล้ว → ราคา · ตั้งปุ่มราคาได้ที่ ตั้งค่า → ราคา</li>
+    <li>ตั้งพร้อมเพย์ไว้ (ตั้งค่า → การรับเงิน): เลือกราคาแล้ว QR พร้อมยอดขึ้นทันที ลูกค้าสแกนจ่าย → เห็นแจ้งเตือนเงินเข้าในแอปธนาคาร กด "ได้รับเงินโอนแล้ว" · จ่ายเงินสดกด "ลูกค้าจ่ายเงินสด"</li>
+    <li>แตะคิวที่เสร็จแล้ว → เปลี่ยนวิธีจ่าย (เงินสด ↔ โอน) · หน้าสรุปแยกยอดเงินสด / โอน ไว้เช็กกับแอปธนาคาร</li>
   </ul>
   <h4><i class="ti ti-users"></i> สมาชิกและแต้ม</h4>
   <ul>
