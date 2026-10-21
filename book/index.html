@@ -136,7 +136,7 @@ button[aria-label],a[aria-label]{-webkit-touch-callout:none;-webkit-user-select:
 </style>
 
 <style>
-.wheel-wrap{position:relative;margin:0 -20px 6px}
+.wheel-wrap{position:relative;margin:-6px -20px 6px}
 .wheel{--iw:76px;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;padding:0 calc(50% - var(--iw) / 2);
   -webkit-mask-image:linear-gradient(90deg,transparent,#000 30%,#000 70%,transparent);mask-image:linear-gradient(90deg,transparent,#000 30%,#000 70%,transparent)}
 .wheel::-webkit-scrollbar{display:none}
@@ -622,7 +622,7 @@ function showBook(resched, forOther) {
     ${shopNoteHtml()}${noticeHtml()}
     ${S.resched ? `<div class="mu" style="margin:-8px 0 16px"><i class="ti ti-pencil"></i> เลื่อนคิวเดิม ${dShort(S.resched.date)} ${esc(S.resched.time)}</div>` : ''}
     ${S.forOther ? '<div class="mu" style="margin:-8px 0 16px"><i class="ti ti-user-plus"></i> จองให้คนอื่น · ใส่ชื่อและเบอร์ของคนที่จะมาตัด</div>' : ''}
-    <div class="chips" id="days" style="grid-template-columns:repeat(${Math.min(d.days.length, 4)},1fr);margin-bottom:8px"></div>
+    <div class="chips" id="days" style="grid-template-columns:repeat(${Math.min(d.days.length, 4)},1fr);margin-bottom:0"></div>
     <div class="wheel-wrap"><button class="wa l" data-step="-1" aria-label="เวลาก่อนหน้า"><i class="ti ti-chevron-left"></i></button>
       <div class="wheel" id="wh"></div><div class="wheel-mark"></div>
       <button class="wa r" data-step="1" aria-label="เวลาถัดไป"><i class="ti ti-chevron-right"></i></button></div>
