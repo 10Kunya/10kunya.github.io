@@ -1139,11 +1139,17 @@ async function addSheet(time, date) {
       <div class="mu" style="margin-top:4px">ลูกค้าใหม่</div>
       <div class="field"><i class="ti ti-user"></i><input id="an" value="${esc(st.nn || '')}" placeholder="ชื่อ" maxlength="40"></div>
       <div class="field"><i class="ti ti-phone"></i><input id="ap" value="${esc(st.np || '')}" placeholder="เบอร์โทร" inputmode="tel" maxlength="12"></div>` : ''}
+    ${(st.who || st.find) && day.refBonus ? (st.ref == null
+      ? `<button class="mu" data-a="refon" style="padding:10px 0"><i class="ti ti-users-plus"></i> เพิ่มเบอร์คนชวน (ลูกค้าใหม่ · ได้คนละ +${day.refBonus} แต้ม)</button>`
+      : `<div class="mu" style="margin-top:10px"><i class="ti ti-users-plus"></i> เบอร์คนชวน (ได้คนละ +${day.refBonus} แต้ม เมื่อลูกค้าใหม่มาตัดครั้งแรก)</div>
+        <div class="field"><i class="ti ti-phone"></i><input id="aref" value="${esc(st.ref)}" placeholder="เบอร์ของคนที่ชวนมา" inputmode="tel" maxlength="12">
+        <button data-a="refoff" class="mu" style="padding:6px" aria-label="ไม่ใส่เบอร์คนชวน"><i class="ti ti-x"></i></button></div>`) : ''}
     <div class="err" id="aerr"></div>
     <button class="btn" data-a="walkin" style="margin-top:16px">${st.pick ? `เพิ่ม ${esc(st.who ? st.who.name || st.who.phone : 'walk-in')} · ${st.pick}` : 'เพิ่มคิว'}</button>
     <button class="btn line" data-a="block" style="margin-top:10px"><i class="ti ti-lock"></i> ปิดช่วงนี้ ไม่รับคิว</button>`;
   const draw = () => {
     $('.sbody', sh).innerHTML = html();
+    if ($('#aref', sh)) $('#aref', sh).oninput = e => { st.ref = e.target.value; };
     if (!st.find) return;
     $('#an', sh).oninput = e => { st.nn = e.target.value; };
     $('#ap', sh).oninput = e => { st.np = e.target.value; };
@@ -1163,6 +1169,8 @@ async function addSheet(time, date) {
     if (a === 'day') return addSheet(st.pick, b.dataset.d);
     if (a === 'pick') { st.pick = b.dataset.t; return draw(); }
     if (a === 'walk') { st.who = null; st.find = false; return draw(); }
+    if (a === 'refon') { st.ref = ''; draw(); return $('#aref', sh).focus(); }
+    if (a === 'refoff') { st.ref = null; return draw(); }
     if (a === 'find') { st.who = null; st.find = true; draw(); return $('#fq', sh).focus(); }
     if (a === 'who') { st.who = B.recent.find(m => m.phone === b.dataset.p); st.find = false; return draw(); }
     if (a === 'pickm') { st.who = (st.found || []).find(m => m.phone === b.dataset.p); st.find = false; return draw(); }
@@ -1170,7 +1178,8 @@ async function addSheet(time, date) {
     if (a === 'walkin') {
       let name = st.who ? st.who.name : '', phone = st.who ? st.who.phone : '';
       if (st.find) { name = st.nn || ''; phone = st.np || ''; }
-      act({ action: 'walkin', date: day.date, time: st.pick, name, phone }, 'เพิ่มคิว ' + st.pick);
+      const referrer = st.ref ? st.ref.replace(/\D/g, '') : '';
+      act({ action: 'walkin', date: day.date, time: st.pick, name, phone, referrer }, 'เพิ่มคิว ' + st.pick + (referrer ? ' · มีคนชวน' : ''));
     }
     if (a === 'block') act({ action: 'block', date: day.date, time: st.pick }, 'ปิดช่วง ' + st.pick);
   });
@@ -2309,6 +2318,7 @@ function manualHtml(s) {
   <ul>
     <li>เลือกวัน → เวลา → ลูกค้า (ลูกค้าประจำ / ไม่ระบุ / ค้นหา·ใหม่)</li>
     <li>ใส่เบอร์ลูกค้า = ได้แต้มเมื่อกดเสร็จ · ไม่ระบุ = กดเสร็จแล้วจะถามว่าให้แต้มใคร (เลือก / ใส่เบอร์ / ข้าม)</li>
+    <li>ลูกค้าใหม่ที่เพื่อนชวนมา: เลือกลูกค้า / ใส่เบอร์ใหม่ → แตะ "เพิ่มเบอร์คนชวน" → ใส่เบอร์เพื่อน (ต้องเป็นสมาชิกร้าน) · ตัดครั้งแรกเสร็จ ได้แต้มทั้งคู่อัตโนมัติ</li>
   </ul>
   <h4><i class="ti ti-arrows-exchange"></i> เลื่อนคิว</h4>
   <ul>
