@@ -336,6 +336,17 @@ body.tab-l .k b{font-size:34px}
 .addq .nrow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .addq .field input{padding:8px 0 !important}
 .addq h3{font-size:20px !important}
+.qhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-right:36px;margin-bottom:10px}
+.qhead .qt{font-size:26px}
+.qhead .qn{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:20px}
+.qhead .qn b{font-weight:500}
+.qhead .qp{display:inline-flex;align-items:center;gap:6px;color:var(--text);border:1px solid var(--line2);border-radius:20px;padding:4px 12px;font-size:16px;font-variant-numeric:lining-nums}
+.qpay{flex-wrap:wrap;gap:10px}
+.qpay .qpl{display:flex;align-items:center;gap:14px;color:var(--gold);font-size:inherit}
+.qpay .qpl .ti{font-size:20px;width:22px}
+.qpc{display:flex;gap:6px;margin-left:auto}
+.qpc .chip{padding:6px 12px !important;font-size:17px !important;min-width:52px}
+.qpc .chip:last-child{font-family:var(--sans);font-size:14px !important}
 .numd{font-family:var(--serif);font-variant-numeric:lining-nums;font-size:40px;color:var(--gold);text-align:center;min-height:56px;border-bottom:1px solid var(--line2);margin-bottom:14px}
 .npad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .npad button{border:1px solid var(--line2);border-radius:12px;padding:12px 0;font-family:var(--serif);font-variant-numeric:lining-nums;font-size:24px}
@@ -1062,14 +1073,24 @@ async function moveAct(r, date, time) {
 
 function rowSheet(r) {
   if (!r) return;
-  const head = `<h3><span class="sv au" style="font-size:24px">${esc(r.time)}</span> &nbsp;${esc(r.name || 'ปิดช่วงเวลา')}</h3>`;
+  const m = r.m;
+  const head = r.status === 'block' ? `<h3><span class="sv au" style="font-size:24px">${esc(r.time)}</span> &nbsp;ปิดช่วงเวลา</h3>`
+    : `<div class="qhead"><span class="sv au qt">${esc(r.time)}</span>
+        <span class="qn"><b>${esc(r.name)}</b>${m ? tierBadge({ idx: m.idx, count: m.count, name: m.tier }) : ''}</span>
+        ${r.phone ? `<a class="qp" href="tel:${esc(r.phone)}" aria-label="โทรหาลูกค้า"><i class="ti ti-phone"></i>${esc(r.phone)}</a>` : ''}</div>`;
+  // ป้ายอื่น (แลกได้ / เคยไม่มา / เลื่อนบ่อย) ใต้หัว
+  const tags = m && (m.gift || m.warn || m.mv) ? `<div style="display:flex;gap:5px;flex-wrap:wrap;margin:-4px 0 8px">
+    ${m.gift ? '<span class="badge" style="background:var(--gold);color:var(--bg);border-color:var(--gold)"><i class="ti ti-gift"></i> แลกได้</span>' : ''}
+    ${m.warn ? '<span class="badge" style="border-color:var(--c-noshow);color:var(--c-noshow)"><i class="ti ti-alert-triangle"></i> เคยไม่มา</span>' : ''}
+    ${m.mv ? `<span class="badge" style="border-color:var(--c-move);color:var(--c-move)"><i class="ti ti-arrows-exchange"></i> เลื่อนบ่อย (${m.mv})</span>` : ''}</div>` : '';
   let acts = '';
   if (r.status === 'booked') acts =
-    (r.phone ? `<a class="act" href="tel:${esc(r.phone)}"><i class="ti ti-phone"></i>${esc(r.phone)}</a>` : '') +
-    '<button class="act gold" data-a="done"><i class="ti ti-check"></i>เสร็จ</button>' +
-    '<button class="act" data-a="noshow"><i class="ti ti-user-x"></i>ไม่มา</button>' +
+    `<div class="act gold qpay"><button data-a="done" class="qpl"><i class="ti ti-cash-register"></i>คิดเงิน</button>
+      <span class="qpc">${(B.d.topPrices || []).map(v => `<button class="chip sv ${v === r.last ? 'on' : ''}" data-a="qp" data-v="${v}">${v}</button>`).join('')}
+      <button class="chip" data-a="done" aria-label="ราคาอื่น">อื่น ๆ</button></span></div>` +
     '<button class="act" data-a="move"><i class="ti ti-arrows-exchange"></i>เลื่อนเวลา</button>' +
-    '<button class="act warn" data-a="cancel"><i class="ti ti-x"></i>ยกเลิกคิว</button>';
+    '<button class="act" data-a="noshow"><i class="ti ti-user-x"></i>ไม่มา</button>' +
+    '<button class="act warn" data-a="cancel"><i class="ti ti-x"></i>ลูกค้าแจ้งยกเลิกคิว</button>';
   else if (r.status === 'block') acts = '<button class="act gold" data-a="unblock"><i class="ti ti-lock-open"></i>เปิดรับคิวช่วงนี้</button>';
   else acts =
     (r.phone ? `<a class="act" href="tel:${esc(r.phone)}"><i class="ti ti-phone"></i>${esc(r.phone)}</a>` : '') +
@@ -1077,8 +1098,9 @@ function rowSheet(r) {
     (r.status === 'done' && r.price ? `<button class="act" data-a="paysw"><i class="ti ti-${r.pay === 'transfer' ? 'qrcode' : 'cash'}"></i>${r.pay ? (r.pay === 'cash' ? 'จ่ายเงินสด' : 'จ่ายโอน') + ' · แตะเพื่อเปลี่ยนเป็น' + (r.pay === 'cash' ? 'โอน' : 'เงินสด') : 'ยังไม่ระบุวิธีจ่าย · แตะเพื่อเลือก'}</button>` : '') +
     '<button class="act" data-a="booked"><i class="ti ti-arrow-back-up"></i>กลับเป็นรอคิว</button>';
   const note = r.note ? `<div class="pq"><i class="ti ti-message-dots" style="color:var(--c-note)"></i> ${esc(r.note)}</div>` : '';
-  openSheet(head + memTags(r) + note + acts, a => {
+  openSheet(head + (r.status === 'booked' ? tags : memTags(r)) + note + acts, (a, b) => {
     if (a === 'done') return doneFlow(r.id);
+    if (a === 'qp') return doneFlow(r.id, +b.dataset.v);
     if (a === 'price') return priceSheet(r, p => act({ action: 'price', id: r.id, price: p }, p ? 'ราคา ฿' + p : 'ลบราคาแล้ว'), true);
     if (a === 'paysw') {
       if (r.pay) { const to = r.pay === 'cash' ? 'transfer' : 'cash'; return act({ action: 'price', id: r.id, pay: to }, to === 'cash' ? 'เปลี่ยนเป็นเงินสดแล้ว' : 'เปลี่ยนเป็นโอนแล้ว'); }
@@ -1086,7 +1108,7 @@ function rowSheet(r) {
         x => act({ action: 'price', id: r.id, pay: x }, 'บันทึกวิธีจ่ายแล้ว'));
     }
     if (a === 'move') return moveSheet(r, B.d.date);
-    if (a === 'cancel') return askConfirm(`ยกเลิกคิว ${r.time} ${r.name}?`, 'ยกเลิกคิว', () => act({ action: 'cancel', id: r.id }, 'ยกเลิกแล้ว'));
+    if (a === 'cancel') return askConfirm(`ลูกค้าแจ้งยกเลิกคิว ${r.time} ${r.name}?`, 'ยกเลิกคิว', () => act({ action: 'cancel', id: r.id }, 'ยกเลิกแล้ว'));
     act({ action: a, id: r.id }, { done: 'เสร็จแล้ว', noshow: 'บันทึกว่าไม่มา', unblock: 'เปิดรับคิวแล้ว', booked: 'กลับเป็นรอคิวแล้ว' }[a]);
   });
 }
@@ -2043,12 +2065,13 @@ function mergeSheet(m) {
 }
 
 // กดเสร็จคิวที่ไม่มีเบอร์ → ถามว่าให้แต้มใคร
-async function doneFlow(id) {
+async function doneFlow(id, price) {
   const r = B.d.rows.find(x => x.id === id);
   if (!r) return;
   const save = (extra, p, pay) => act(Object.assign({ action: 'done', id: id, price: p, pay: pay || '' }, extra),
     'เสร็จแล้ว' + (p ? ' · ฿' + p : '') + (pay ? (pay === 'cash' ? ' เงินสด' : ' โอน') : ''));
-  const finish = extra => priceSheet(r, p => (B.d.pp || B.d.bq) && p ? paySheet(p, pay => save(extra, p, pay)) : save(extra, p, ''));
+  const toPay = (extra, p) => p ? paySheet(p, pay => save(extra, p, pay)) : save(extra, 0, '');
+  const finish = extra => price ? toPay(extra, price) : priceSheet(r, p => toPay(extra, p));
   if (r.phone) return finish({});
   if (!B.recent) B.recent = (await api('barberMembers', '').catch(() => [])).slice(0, 8);
   const st = { nn: '', np: '' };
@@ -2123,10 +2146,16 @@ async function ensureBankQr(ver) {
 // onPick ไม่ส่งมา = ดูอย่างเดียว · src = ข้อมูลร้าน (ค่าเริ่มต้นจากหน้าคิว)
 async function paySheet(amount, onPick, mode, src) {
   src = src || B.d;
-  mode = mode || (src.pp ? 'pp' : 'bank');
+  mode = mode || (src.pp ? 'pp' : src.bq ? 'bank' : 'none');
   const bq = mode === 'bank' ? await ensureBankQr(src.bq) : '';
   const other = mode === 'pp' ? (src.bq ? 'bank' : '') : (src.pp ? 'pp' : '');
-  const sh = stackSheet(`<div style="text-align:center">
+  const sh = stackSheet(mode === 'none' ? `<div style="text-align:center">
+    <div class="mu">คิดเงิน</div>
+    <div class="sv au" style="font-size:52px;line-height:1.25">฿${amount}</div>
+    <div class="mu" style="margin-bottom:16px">ลูกค้าจ่ายแบบไหน?</div>
+    <button class="btn" data-a="cash"><i class="ti ti-cash"></i> เงินสด</button>
+    <button class="btn line" data-a="tr" style="margin-top:10px"><i class="ti ti-building-bank"></i> โอนแล้ว</button>
+    <div class="mu" style="margin-top:10px">ปิดหน้าต่าง = ยังไม่บันทึก</div></div>` : `<div style="text-align:center">
     <div class="mu">สแกนจ่าย · ${mode === 'pp' ? 'พร้อมเพย์' : 'QR ธนาคาร'}</div>
     ${amount ? `<div class="sv au" style="font-size:46px;line-height:1.2">฿${amount}</div>` : '<div class="mu" style="margin:6px 0">ไม่ระบุยอด · ลูกค้าใส่ยอดเอง</div>'}
     <div class="ppbox">${mode === 'pp' ? ppQrImg(src.pp, amount) : bq ? `<img src="${bq}" alt="QR ธนาคาร" style="image-rendering:auto">` : '<div class="mu" style="color:#555;padding:30px">โหลดรูป QR ไม่ได้</div>'}</div>
@@ -2341,7 +2370,8 @@ function manualHtml(s) {
     <li>การ์ดบนสุด = คิวตอนนี้ (หรือคิวถัดไป) กด <i class="ti ti-check"></i> เมื่อตัดเสร็จ → เลือกราคา → (ถ้าตั้งพร้อมเพย์ไว้) QR รับเงิน → ลูกค้าได้แต้มอัตโนมัติ</li>
     <li>ด้านขวาของการ์ด: <i class="ti ti-users"></i> ทั้งหมด · <i class="ti ti-check"></i> เสร็จ · <i class="ti ti-hourglass"></i> รอ</li>
     <li>เปลี่ยนวัน: <i class="ti ti-chevron-left"></i> <i class="ti ti-chevron-right"></i> ทีละวัน · แตะปุ่ม <i class="ti ti-calendar"></i> วันที่ = ปฏิทินทั้งเดือน (ตัวเลขทอง = จำนวนคิว · สีจาง = วันหยุดประจำ · สีแดง = หยุดพิเศษ) · <i class="ti ti-arrow-back-up"></i> วันนี้ = กลับวันนี้</li>
-    <li>แตะช่องที่มีคิว = เมนู (เสร็จ / ไม่มา / เลื่อนเวลา / ยกเลิก / โทร) · คิวที่เสร็จแล้ว แตะเพื่อแก้ราคา เปลี่ยนวิธีจ่าย หรือกลับเป็นรอคิว</li>
+    <li>แตะช่องที่มีคิว = <b>เมนูคิว</b>: หัวบอกเวลา ชื่อ ระดับ เบอร์ (แตะเพื่อโทร) · <b>คิดเงิน</b> (แตะราคาที่ใช้บ่อย 3 อันดับ หรือ "อื่น ๆ") · เลื่อนเวลา · ไม่มา · ลูกค้าแจ้งยกเลิกคิว</li>
+    <li>คิดเงิน: เลือกราคา → เลือก เงินสด / โอน (ตั้งพร้อมเพย์หรือ QR ธนาคารไว้ จะมี QR ให้ลูกค้าสแกน) · คิวที่เสร็จแล้ว แตะเพื่อแก้ราคา เปลี่ยนวิธีจ่าย หรือกลับเป็นรอคิว</li>
     <li>แตะช่องว่าง = เพิ่มคิวเวลานั้น หรือปิดช่วงไม่รับคิว</li>
     <li><b>กดค้างที่คิว</b> แล้วลากไปช่องว่าง = ย้ายเวลา (มีถามยืนยันก่อน)</li>
   </ul>
