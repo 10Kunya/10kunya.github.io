@@ -168,9 +168,11 @@ button[aria-label],a[aria-label]{-webkit-touch-callout:none;-webkit-user-select:
 .hs-n{width:30px;height:30px;border-radius:50%;border:1px solid var(--gold);color:var(--gold);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--serif)}
 .help h4{margin:16px 0 6px;font-size:15px;font-weight:500;color:var(--gold)}
 .help ul{margin:0;padding-left:18px;line-height:1.7;font-size:14px}
-.hbtn{display:flex;gap:14px;flex-shrink:0}
+.hbtn{display:flex;gap:10px;flex-shrink:0;margin-left:8px}
+.hbtn button{font-size:12px !important;min-width:40px}
+.head .mu{white-space:nowrap}
 .hbtn button{white-space:nowrap}
-@media (max-width:360px){ .hbtn{gap:8px} .head .brand{font-size:21px} }
+@media (max-width:360px){ .hbtn{gap:6px;margin-left:4px} .hbtn button{min-width:34px} .head .brand{font-size:20px} .head .shoplogo{display:none} .head .mu{white-space:normal} }
 .promo{border:1px solid var(--gold-line);border-radius:12px;margin-bottom:18px;overflow:hidden}
 .promo-h{display:flex;align-items:center;gap:10px;width:100%;padding:11px 14px;text-align:left}
 .promo-h .ti:first-child{font-size:20px}
@@ -509,7 +511,28 @@ async function load(except) {
 function noteField() {
   return `<div class="field" id="notebox"><i class="ti ti-message"></i><input id="nt" maxlength="100" placeholder="ฝากข้อความถึงช่าง (ไม่ใส่ก็ได้)" value="${esc(S.resched ? S.resched.note || '' : '')}"></div>`;
 }
-// โปรโมชั่นบนหน้าจอง: แถบพับได้ แตะเปิด/ปิด (จำไว้ในเครื่อง)
+// หัวหน้าร้าน (ใช้ทั้งหน้าจองและหน้าตั๋ว): โลโก้ · ชื่อร้าน · เวลาเปิด · ปุ่มโปรโมชั่น/สมาชิก/วิธีใช้
+function shopHead(btns) {
+  const d = S.d;
+  return `<div class="head" style="align-items:flex-start">
+      <div style="display:flex;align-items:center;gap:12px;min-width:0">${logoTag(48)}<div><div class="sv brand">${esc(d.shop)}</div>
+      <div class="mu"><span id="hrs">${esc(d.open)} – ${esc(d.close)}</span> · ${esc(closedText(d.closedDays))}</div></div></div>
+      ${btns ? headBtns() : ''}
+    </div>`;
+}
+function hasPromo() { const t = S.d.terms; return !!t && (t.boosts.length > 0 || t.birthdayBonus > 0 || t.referralBonus > 0); }
+function headBtns() {
+  const b = (k, ic, label) => `<button class="mu" data-hb="${k}" style="font-size:13px;text-align:center"><i class="ti ti-${ic} au" style="font-size:22px"></i><br>${label}</button>`;
+  return `<span class="hbtn">${hasPromo() ? b('promo', 'gift', 'โปรโมชั่น') : ''}${b('mem', 'id-badge-2', 'สมาชิก')}${b('help', 'help-circle', 'วิธีใช้')}</span>`;
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-hb]'); if (!b) return;
+  const k = b.dataset.hb;
+  if (k === 'promo') return openSheet(promoHtml(S.d.terms));
+  if (k === 'mem') return showMember();
+  if (k === 'help') return helpSheet();
+});
+// (เดิม) แถบโปรโมชั่นแบบพับได้ — ไม่ได้ใช้แล้ว ย้ายไปเป็นปุ่มบนหัวหน้า
 function promoBox() {
   const t = S.d.terms;
   if (!t) return '';
@@ -581,13 +604,8 @@ function showBook(resched, forOther) {
   const me = store.get('k10_me', {});
   const d = S.d;
   $('#app').innerHTML = `
-    <div class="head" style="align-items:flex-start">
-      <div style="display:flex;align-items:center;gap:12px;min-width:0">${logoTag(48)}<div><div class="sv brand">${esc(d.shop)}</div>
-      <div class="mu"><span id="hrs">${esc(d.open)} – ${esc(d.close)}</span> · ${esc(closedText(d.closedDays))}</div></div></div>
-      ${S.resched ? '' : `<span class="hbtn"><button id="hlp" class="mu" style="font-size:13px;text-align:center"><i class="ti ti-help-circle au" style="font-size:22px"></i><br>วิธีใช้</button>
-        <button id="mem" class="mu" style="font-size:13px;text-align:center"><i class="ti ti-id-badge-2 au" style="font-size:22px"></i><br>สมาชิก</button></span>`}
-    </div>
-    ${shopNoteHtml()}${noticeHtml()}${S.resched ? '' : promoBox()}
+    ${shopHead(!S.resched)}
+    ${shopNoteHtml()}${noticeHtml()}
     ${S.resched ? `<div class="mu" style="margin:-8px 0 16px"><i class="ti ti-pencil"></i> เลื่อนคิวเดิม ${dShort(S.resched.date)} ${esc(S.resched.time)}</div>` : ''}
     ${S.forOther ? '<div class="mu" style="margin:-8px 0 16px"><i class="ti ti-user-plus"></i> จองให้คนอื่น · ใส่ชื่อและเบอร์ของคนที่จะมาตัด</div>' : ''}
     <div class="chips" id="days" style="grid-template-columns:repeat(${Math.min(d.days.length, 4)},1fr);margin-bottom:22px"></div>
@@ -610,8 +628,6 @@ function showBook(resched, forOther) {
   $('#app').onclick = null;
   renderDays();
   if (!S.resched) renderWho(S.forOther || !(me.name && me.phone));
-  if ($('#mem')) $('#mem').onclick = () => showMember();
-  if ($('#hlp')) $('#hlp').onclick = helpSheet;
   $('#sugs').addEventListener('click', e => {
     const b = e.target.closest('[data-t]'); if (!b) return;
     if (b.dataset.d !== S.day) { S.day = b.dataset.d; renderDays(); renderWheel(b.dataset.t); }
@@ -833,7 +849,8 @@ function showTickets(focus) {
   S.mode = 'ticket'; S.resched = null; S.forOther = false;
   const d = S.d;
   if (!d.tickets.length) return showBook();
-  $('#app').innerHTML = shopNoteHtml() + noticeHtml() + d.tickets.map(t => `
+  $('#app').innerHTML = shopHead(true) +
+    shopNoteHtml() + noticeHtml() + d.tickets.map(t => `
     <div class="card" style="margin-bottom:16px${focus && focus !== t.token ? ';opacity:.75' : ''}">
       <div class="tk-top">
         ${logoTag(46, 'display:block;margin:0 auto') || '<i class="ti ti-scissors au" style="font-size:20px"></i>'}
@@ -854,11 +871,9 @@ function showTickets(focus) {
       </div>
     </div>`).join('') + `
     <div class="mu" style="text-align:center;margin:4px 0 18px">เปิดหน้านี้อีกครั้งเพื่อเลื่อนหรือยกเลิก · กด "เก็บลิงก์" ไว้เปิดจากเครื่องอื่น</div>
-    ${promoBox()}
     ${a2hsHtml(true)}
     <button class="btn line" data-a="new"><i class="ti ti-plus"></i> จองคิวให้อีกคน</button>
-    <button class="link" data-a="mem" style="margin-top:6px"><i class="ti ti-id-badge-2"></i> บัตรสมาชิก · ดูแต้ม</button>
-    <button class="link" data-a="help"><i class="ti ti-help-circle"></i> วิธีใช้</button>`;
+`;
   $('#app').onclick = async e => {
     const b = e.target.closest('[data-a]'); if (!b) return;
     const t = d.tickets.find(x => x.token === b.dataset.k);
@@ -903,7 +918,7 @@ function helpSheet() {
     <ul><li>เลือกวัน แล้วเลื่อนวงล้อ (หรือกด ‹ ›) ไปเวลาที่อยากมา</li>
       <li>ถ้าเวลานั้นมีคิวแล้ว จะมีเวลาใกล้ที่สุดที่ว่างให้แตะเลือก</li>
       <li>ใส่ชื่อและเบอร์โทร (ครั้งแรกครั้งเดียว เครื่องนี้จำไว้ให้) แล้วกด "จองเวลา"</li>
-      <li>แตะแถบ "โปรโมชั่น" เพื่อดู / ซ่อนโปรที่ร้านจัดอยู่</li>
+      <li>ปุ่มมุมขวาบน: <b>โปรโมชั่น</b> (ดูโปรที่ร้านจัดอยู่) · <b>สมาชิก</b> (ดูแต้ม) · <b>วิธีใช้</b> (หน้านี้)</li>
       <li>มีอะไรอยากบอกช่าง พิมพ์ในช่อง "ฝากข้อความถึงช่าง" ใต้เบอร์โทร (ไม่ใส่ก็ได้)</li>
       <li>จองให้คนอื่น: หลังจองเสร็จกด "จองคิวให้อีกคน"</li></ul>
     <h4><i class="ti ti-ticket"></i> ตั๋วคิว</h4>
