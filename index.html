@@ -1113,8 +1113,9 @@ function openDays(sel, n) {
   if (sel && out.indexOf(sel) < 0) out.unshift(sel);
   return out;
 }
-function dayChips(sel) {
-  return '<div class="chips" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px">' + openDays(sel).map(ds =>
+function dayChips(sel, n) {
+  const days = openDays(sel, n);
+  return `<div class="chips" style="grid-template-columns:repeat(${Math.min(days.length, 4)},1fr);margin-bottom:12px">` + days.map(ds =>
     `<button class="chip ${ds === sel ? 'on' : ''}" data-a="day" data-d="${ds}">${ds === B.d.today ? 'วันนี้' : WD[wday(ds)]}<small>${ymd(ds)[2]} ${MO[ymd(ds)[1] - 1]}</small></button>`).join('') + '</div>';
 }
 async function dayData(date) { return date === B.d.date ? B.d : api('barberDay', date).catch(() => null); }
@@ -1125,7 +1126,7 @@ async function moveSheet(r, date) {
   const draw = async () => {
     const day = await dayData(cur);
     if (!day) return;
-    const html = `<h3>เลื่อน ${esc(r.name)}</h3>${dayChips(day.date)}${slotChips(freeAhead(day), '')}`;
+    const html = `<h3>เลื่อน ${esc(r.name)}</h3>${dayChips(day.date, 3)}${slotChips(freeAhead(day), '')}`;   // เลื่อนคิว: 3 วันที่ร้านเปิด
     if (sh) { $('.sbody', sh).innerHTML = html; return; }
     sh = stackSheet(html, (a, b) => {
       if (a === 'day') { cur = b.dataset.d; return draw(); }
