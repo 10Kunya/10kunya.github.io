@@ -319,6 +319,7 @@ body.tab-l .sum > div + div{margin-top:0 !important}
 body.tab-l .k b{font-size:34px}
 .ppbox{background:#fff;border-radius:16px;padding:10px;display:inline-block;margin-top:6px}
 .ppbox img{display:block;width:min(240px,62vw);height:auto;image-rendering:pixelated}
+.btn.off{opacity:.35;pointer-events:none;background:transparent;color:var(--mute);border:1px solid var(--line2)}
 .numd{font-family:var(--serif);font-variant-numeric:lining-nums;font-size:40px;color:var(--gold);text-align:center;min-height:56px;border-bottom:1px solid var(--line2);margin-bottom:14px}
 .npad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .npad button{border:1px solid var(--line2);border-radius:12px;padding:12px 0;font-family:var(--serif);font-variant-numeric:lining-nums;font-size:24px}
@@ -1264,7 +1265,7 @@ function leaveSetPage() {
   const go = () => { B.setPage = ''; B.set = clone(B.setSaved); renderSettings(); window.scrollTo(0, 0); };
   if (EDIT_PAGES.indexOf(B.setPage) >= 0) {
     readSettings();
-    if (JSON.stringify(B.set) !== JSON.stringify(B.setSaved)) return askConfirm('ยังไม่ได้บันทึก · ออกโดยไม่บันทึก?', 'ออก ไม่บันทึก', go, 'อยู่ต่อ');
+    if (!sameSet(B.set, B.setSaved)) return askConfirm('ยังไม่ได้บันทึก · ออกโดยไม่บันทึก?', 'ออก ไม่บันทึก', go, 'อยู่ต่อ');
   }
   go();
 }
@@ -1274,10 +1275,21 @@ function openSetPage(page) {
   go();
 }
 // หน้าที่เปิดอยู่มีค่าที่แก้แล้วยังไม่บันทึกไหม
+// เทียบค่าแบบไม่สนลำดับช่อง (ค่าจากเซิร์ฟเวอร์กับค่าที่อ่านจากหน้าจอเรียงช่องต่างกัน)
+const stable = v => Array.isArray(v) ? '[' + v.map(stable).join(',') + ']'
+  : v && typeof v === 'object' ? '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + stable(v[k])).join(',') + '}' : JSON.stringify(v);
+const sameSet = (a, b) => stable(a) === stable(b);
+// ปุ่มบันทึก: กดได้เมื่อมีการแก้ไขเท่านั้น
+function updateSaveBtn() {
+  const b = $('#app [data-a=save]');
+  if (b) { const d = setDirty(); b.classList.toggle('off', !d); b.textContent = d ? 'บันทึก' : 'ยังไม่มีการแก้ไข'; }
+}
+document.addEventListener('input', () => { if (B.view === 'set') updateSaveBtn(); });
+document.addEventListener('change', () => { if (B.view === 'set') setTimeout(updateSaveBtn, 0); });
 function setDirty() {
   if (EDIT_PAGES.indexOf(B.setPage) < 0) return false;
   readSettings();
-  return JSON.stringify(B.set) !== JSON.stringify(B.setSaved);
+  return !sameSet(B.set, B.setSaved);
 }
 
 // เงื่อนไขสมาชิก: เปิดเต็มจอให้ลูกค้าดู (ใช้ค่าที่บันทึกแล้ว)
@@ -1320,7 +1332,7 @@ function renderSettings() {
     $('#app').innerHTML = `<div class="md">
       <div class="set"><div class="head"><span class="sv brand">ตั้งค่า</span></div>${menuHtml(s, pg)}</div>
       <div class="md-r set"><div class="head"><span class="sv brand"><i class="ti ${icon} au" style="font-size:19px"></i> ${title}</span></div>${pageBody(pg, s)}</div></div>`;
-    fillPushSum(); afterPage(pg, s);
+    fillPushSum(); afterPage(pg, s); updateSaveBtn();
     return;
   }
   const pg = B.setPage;
@@ -1340,7 +1352,7 @@ function renderSettings() {
       <span class="sv brand"><i class="ti ${icon} au" style="font-size:19px"></i> ${title}</span></div>
     ${pageBody(pg, s)}
   </div>`;
-  afterPage(pg, s);
+  afterPage(pg, s); updateSaveBtn();
 }
 
 const PAGE_BODY = {
@@ -1489,6 +1501,7 @@ function readSettings() {
 }
 
 async function saveSet(btn) {
+  if (btn && !setDirty()) return false;   // ไม่มีอะไรเปลี่ยน ไม่ต้องบันทึก / ไม่ต้องแจ้ง
   if (btn) btn.classList.add('busy');
   let r;
   try { r = await api('saveSettings', B.set); } catch (err) { if (btn) btn.classList.remove('busy'); return false; }
