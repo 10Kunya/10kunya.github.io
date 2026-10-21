@@ -229,8 +229,8 @@ function toast(msg) {
   toastT = setTimeout(() => el.remove(), 2400);
 }
 
-/*** ---------- ช่องวันที่: แสดงแบบ dd/mmm/yy (พ.ศ.) แต่ยังเปิดปฏิทินของเครื่องตอนแตะ ---------- ***/
-const fmtD = ds => { if (!ds) return ''; const [y, m, d] = ymd(ds); return String(d).padStart(2, '0') + '/' + MO[m - 1] + '/' + String((y + 543) % 100).padStart(2, '0'); };
+/*** ---------- ช่องวันที่: แสดงแบบ dd mmm yy (พ.ศ.) แต่ยังเปิดปฏิทินของเครื่องตอนแตะ ---------- ***/
+const fmtD = ds => { if (!ds) return ''; const [y, m, d] = ymd(ds); return String(d).padStart(2, '0') + ' ' + MO[m - 1] + ' ' + String((y + 543) % 100).padStart(2, '0'); };
 function dateField(id, value, min, ph, color) {
   return `<label class="dfield" style="color:${color || 'var(--text)'}"><i class="ti ti-calendar"></i><span class="dtext ${value ? '' : 'ph'}" data-ph="${esc(ph)}">${value ? fmtD(value) : esc(ph)}</span>
     <input type="date" id="${id}" value="${esc(value || '')}" ${min ? `min="${min}"` : ''}></label>`;
