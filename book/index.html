@@ -168,11 +168,12 @@ button[aria-label],a[aria-label]{-webkit-touch-callout:none;-webkit-user-select:
 .hs-n{width:30px;height:30px;border-radius:50%;border:1px solid var(--gold);color:var(--gold);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--serif)}
 .help h4{margin:16px 0 6px;font-size:15px;font-weight:500;color:var(--gold)}
 .help ul{margin:0;padding-left:18px;line-height:1.7;font-size:14px}
+.shopfoot{text-align:center;margin-top:26px;padding-top:14px;border-top:1px solid var(--line);line-height:1.7}
 .hbtn{display:flex;gap:10px;flex-shrink:0;margin-left:8px}
 .hbtn button{font-size:12px !important;min-width:40px}
 .head .mu{white-space:nowrap}
 .hbtn button{white-space:nowrap}
-@media (max-width:360px){ .hbtn{gap:6px;margin-left:4px} .hbtn button{min-width:34px} .head .brand{font-size:20px} .head .shoplogo{display:none} .head .mu{white-space:normal} }
+@media (max-width:360px){ .hbtn{gap:6px;margin-left:4px} .hbtn button{min-width:34px} .head .brand{font-size:20px} .head .shoplogo{width:38px !important;height:38px !important} }
 .promo{border:1px solid var(--gold-line);border-radius:12px;margin-bottom:18px;overflow:hidden}
 .promo-h{display:flex;align-items:center;gap:10px;width:100%;padding:11px 14px;text-align:left}
 .promo-h .ti:first-child{font-size:20px}
@@ -514,11 +515,15 @@ function noteField() {
 // หัวหน้าร้าน (ใช้ทั้งหน้าจองและหน้าตั๋ว): โลโก้ · ชื่อร้าน · เวลาเปิด · ปุ่มโปรโมชั่น/สมาชิก/วิธีใช้
 function shopHead(btns) {
   const d = S.d;
-  return `<div class="head" style="align-items:flex-start">
-      <div style="display:flex;align-items:center;gap:12px;min-width:0">${logoTag(48)}<div><div class="sv brand">${esc(d.shop)}</div>
-      <div class="mu"><span id="hrs">${esc(d.open)} – ${esc(d.close)}</span> · ${esc(closedText(d.closedDays))}</div></div></div>
+  return `<div class="head" style="align-items:center">
+      <div style="display:flex;align-items:center;gap:12px;min-width:0">${logoTag(48)}<div class="sv brand">${esc(d.shop)}</div></div>
       ${btns ? headBtns() : ''}
     </div>`;
+}
+// ท้ายหน้า: เวลาเปิดปิด (หน้าจอง = ตามวันที่เลือก)
+function shopFoot() {
+  const d = S.d;
+  return `<div class="mu shopfoot"><i class="ti ti-clock"></i> เปิด <span id="hrs">${esc(d.open)} – ${esc(d.close)}</span> · ${esc(closedText(d.closedDays))}${d.phone ? ` · <a href="tel:${esc(d.phone)}" class="au">${esc(d.phone)}</a>` : ''}</div>`;
 }
 function hasPromo() { const t = S.d.terms; return !!t && (t.boosts.length > 0 || t.birthdayBonus > 0 || t.referralBonus > 0); }
 function headBtns() {
@@ -624,6 +629,7 @@ function showBook(resched, forOther) {
     <button class="btn" id="go" style="margin-top:18px"></button>
     ${S.resched ? '' : '<div class="mu" style="text-align:center;margin-top:10px;font-size:12px"><i class="ti ti-shield-lock"></i> ร้านเก็บชื่อและเบอร์ไว้เพื่อจองคิวและสะสมแต้มเท่านั้น</div>'}
     ${S.resched ? '<button class="link" id="back">กลับไปที่ตั๋ว</button>' : (d.tickets.length ? '<button class="link" id="back">ดูคิวของฉัน</button>' : '')}
+    ${shopFoot()}
   `;
   $('#app').onclick = null;
   renderDays();
@@ -873,7 +879,7 @@ function showTickets(focus) {
     <div class="mu" style="text-align:center;margin:4px 0 18px">เปิดหน้านี้อีกครั้งเพื่อเลื่อนหรือยกเลิก · กด "เก็บลิงก์" ไว้เปิดจากเครื่องอื่น</div>
     ${a2hsHtml(true)}
     <button class="btn line" data-a="new"><i class="ti ti-plus"></i> จองคิวให้อีกคน</button>
-`;
+    ${shopFoot()}`;
   $('#app').onclick = async e => {
     const b = e.target.closest('[data-a]'); if (!b) return;
     const t = d.tickets.find(x => x.token === b.dataset.k);
