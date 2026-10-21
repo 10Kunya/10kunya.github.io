@@ -454,6 +454,14 @@ function toast(msg) {
   toastT = setTimeout(() => el.remove(), 2400);
 }
 
+// เบอร์โทร: ตัดขีด/ช่องว่าง · +66 → 0 · 9 หลักลืม 0 → เติม 0 (ตรงกับฝั่งเซิร์ฟเวอร์)
+function normPhone(p) {
+  let d = String(p || '').replace(/\D/g, '');
+  if (/^66\d{9}$/.test(d)) d = '0' + d.slice(2);
+  else if (/^[689]\d{8}$/.test(d)) d = '0' + d;
+  return d;
+}
+
 /*** ---------- ช่องวันที่: แสดงแบบ dd mmm yy (พ.ศ.) แต่ยังเปิดปฏิทินของเครื่องตอนแตะ ---------- ***/
 const fmtD = ds => { if (!ds) return ''; const [y, m, d] = ymd(ds); return String(d).padStart(2, '0') + ' ' + MO[m - 1] + ' ' + String((y + 543) % 100).padStart(2, '0'); };
 function dateField(id, value, min, ph, color) {
@@ -1227,7 +1235,7 @@ async function addSheet(time, date) {
         st.found = list;
         if (!list.length) {   // ไม่เจอ → เปิดช่องลูกค้าใหม่ พร้อมเติมชื่อหรือเบอร์ที่พิมพ์ไว้
           st.mode = 'new'; st.who = null;
-          if (/^\d[\d\s-]*$/.test(q)) st.np = q.replace(/\D/g, ''); else st.nn = q;
+          if (/^[+\d][\d\s-]*$/.test(q)) st.np = normPhone(q); else st.nn = q;
         }
         part();
       }, 300);
@@ -1248,8 +1256,9 @@ async function addSheet(time, date) {
     if (!st.pick) { $('#aerr', sh).textContent = 'เลือกเวลาก่อน'; return; }
     if (a === 'walkin') {
       const name = st.mode === 'who' ? st.who.name : st.mode === 'new' ? st.nn : '';
-      const phone = st.mode === 'who' ? st.who.phone : st.mode === 'new' ? st.np : '';
-      const referrer = st.mode !== 'walk' && st.ref ? st.ref.replace(/\D/g, '') : '';
+      const phone = st.mode === 'who' ? st.who.phone : st.mode === 'new' ? normPhone(st.np) : '';
+      if (st.mode === 'new' && phone && !/^0\d{8,9}$/.test(phone)) { $('#aerr', sh).textContent = 'เบอร์โทรไม่ถูกต้อง (ขึ้นต้น 0 · 9–10 หลัก)'; return; }
+      const referrer = st.mode !== 'walk' && st.ref ? normPhone(st.ref) : '';
       act({ action: 'walkin', date: day.date, time: st.pick, name, phone, referrer }, 'เพิ่มคิว ' + st.pick + (referrer ? ' · มีคนชวน' : ''));
     }
     if (a === 'block') act({ action: 'block', date: day.date, time: st.pick }, 'ปิดช่วง ' + st.pick);
@@ -2092,7 +2101,7 @@ async function doneFlow(id, price) {
       if (a === 'who') return finish({ phone: b.dataset.p, name: b.dataset.n });
       if (a === 'skip') return finish({});
       if (a === 'new') {
-        const p = $('#gp', sh).value.replace(/\D/g, '');
+        const p = normPhone($('#gp', sh).value);
         if (!/^0\d{8,9}$/.test(p)) { $('#ge', sh).textContent = 'ใส่เบอร์โทร 10 หลัก'; return; }
         finish({ phone: p, name: $('#gn', sh).value });
       }

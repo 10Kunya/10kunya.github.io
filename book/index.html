@@ -246,6 +246,14 @@ function toast(msg) {
   toastT = setTimeout(() => el.remove(), 2400);
 }
 
+// เบอร์โทร: ตัดขีด/ช่องว่าง · +66 → 0 · 9 หลักลืม 0 → เติม 0 (ตรงกับฝั่งเซิร์ฟเวอร์)
+function normPhone(p) {
+  let d = String(p || '').replace(/\D/g, '');
+  if (/^66\d{9}$/.test(d)) d = '0' + d.slice(2);
+  else if (/^[689]\d{8}$/.test(d)) d = '0' + d;
+  return d;
+}
+
 /*** ---------- ช่องวันที่: แสดงแบบ dd mmm yy (พ.ศ.) แต่ยังเปิดปฏิทินของเครื่องตอนแตะ ---------- ***/
 const fmtD = ds => { if (!ds) return ''; const [y, m, d] = ymd(ds); return String(d).padStart(2, '0') + ' ' + MO[m - 1] + ' ' + String((y + 543) % 100).padStart(2, '0'); };
 function dateField(id, value, min, ph, color) {
@@ -792,7 +800,7 @@ async function submit() {
   let name = '', phone = '';
   if (!S.resched) {
     if ($('#nm')) {
-      name = $('#nm').value.trim(); phone = $('#ph').value.replace(/\D/g, '');
+      name = $('#nm').value.trim(); phone = normPhone($('#ph').value);
       let bad = false;
       if (!name) { $('#enm').textContent = 'ใส่ชื่อก่อน'; bad = true; }
       if (!/^0\d{8,9}$/.test(phone)) { $('#eph').textContent = 'ใส่เบอร์โทร 10 หลัก'; bad = true; }
@@ -806,7 +814,7 @@ async function submit() {
   go.classList.add('busy');
   let res;
   try {
-    const referrer = $('#rf') ? $('#rf').value.replace(/\D/g, '') : '';
+    const referrer = $('#rf') ? normPhone($('#rf').value) : '';
     const note = $('#nt') ? $('#nt').value.trim() : '';
     res = await call('book', { date: S.day, time: S.pick, name, phone, referrer, note, token: S.resched ? S.resched.token : '' });
   } catch (e) {
@@ -981,7 +989,7 @@ function showMember() {
 `;
   if ($('#mterms')) $('#mterms').onclick = () => openSheet(termsHtml(S.d.terms));
   const go = async () => {
-    const ph = $('#mp').value.replace(/\D/g, '');
+    const ph = normPhone($('#mp').value);
     $('#merr').textContent = '';
     if (!/^0\d{8,9}$/.test(ph)) { $('#merr').textContent = 'ใส่เบอร์โทร 10 หลัก'; return; }
     $('#mcard').innerHTML = '<div class="load" style="padding:30px 0"><i class="ti ti-scissors"></i></div>';
