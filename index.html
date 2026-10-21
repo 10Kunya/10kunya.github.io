@@ -1082,15 +1082,15 @@ async function moveAct(r, date, time) {
 function rowSheet(r) {
   if (!r) return;
   const m = r.m;
-  const head = r.status === 'block' ? `<h3><span class="sv au" style="font-size:24px">${esc(r.time)}</span> &nbsp;ปิดช่วงเวลา</h3>`
-    : `<div class="qhead"><span class="sv au qt">${esc(r.time)}</span>
-        <span class="qn"><b>${esc(r.name)}</b>${m ? tierBadge({ idx: m.idx, count: m.count, name: m.tier }) : ''}</span>
-      </div>`;
-  // ป้ายอื่น (แลกได้ / เคยไม่มา / เลื่อนบ่อย) ใต้หัว
-  const tags = m && (m.gift || m.warn || m.mv) ? `<div style="display:flex;gap:5px;flex-wrap:wrap;margin:-4px 0 8px">
+  // ป้ายอื่น (แลกได้ / เคยไม่มา / เลื่อนบ่อย) ข้างชื่อในส่วนหัว
+  const tags = m && (m.gift || m.warn || m.mv) ? `<span style="display:contents">
     ${m.gift ? '<span class="badge" style="background:var(--gold);color:var(--bg);border-color:var(--gold)"><i class="ti ti-gift"></i> แลกได้</span>' : ''}
     ${m.warn ? '<span class="badge" style="border-color:var(--c-noshow);color:var(--c-noshow)"><i class="ti ti-alert-triangle"></i> เคยไม่มา</span>' : ''}
-    ${m.mv ? `<span class="badge" style="border-color:var(--c-move);color:var(--c-move)"><i class="ti ti-arrows-exchange"></i> เลื่อนบ่อย (${m.mv})</span>` : ''}</div>` : '';
+    ${m.mv ? `<span class="badge" style="border-color:var(--c-move);color:var(--c-move)"><i class="ti ti-arrows-exchange"></i> เลื่อนบ่อย (${m.mv})</span>` : ''}</span>` : '';
+  const head = r.status === 'block' ? `<h3><span class="sv au" style="font-size:24px">${esc(r.time)}</span> &nbsp;ปิดช่วงเวลา</h3>`
+    : `<div class="qhead"><span class="sv au qt">${esc(r.time)}</span>
+        <span class="qn"><b>${esc(r.name)}</b>${m ? tierBadge({ idx: m.idx, count: m.count, name: m.tier }) : ''}${tags}</span>
+      </div>`;
   let acts = '';
   if (r.status === 'booked') acts =
     (r.phone ? `<a class="act" href="tel:${esc(r.phone)}"><i class="ti ti-phone"></i>${esc(r.phone)}</a>` : '') +
@@ -1100,7 +1100,7 @@ function rowSheet(r) {
     (r.phone && m && m.gift ? '<button class="act gold" data-a="redeemq"><i class="ti ti-gift"></i>แลกรางวัล <span class="mu" style="margin-left:auto">ตัดฟรี = ไม่ต้องคิดเงิน</span></button>' : '') +
     '<button class="act" data-a="move"><i class="ti ti-arrows-exchange"></i>เลื่อนเวลา</button>' +
     '<button class="act" data-a="noshow"><i class="ti ti-user-x"></i>ไม่มา</button>' +
-    '<button class="act warn" data-a="cancel"><i class="ti ti-x"></i>ลูกค้าแจ้งยกเลิกคิว</button>';
+    '<button class="act warn" data-a="cancel"><i class="ti ti-x"></i>ยกเลิกคิว</button>';
   else if (r.status === 'block') acts = '<button class="act gold" data-a="unblock"><i class="ti ti-lock-open"></i>เปิดรับคิวช่วงนี้</button>';
   else acts =
     (r.phone ? `<a class="act" href="tel:${esc(r.phone)}"><i class="ti ti-phone"></i>${esc(r.phone)}</a>` : '') +
@@ -1109,7 +1109,7 @@ function rowSheet(r) {
     (r.status === 'done' && r.price ? `<button class="act" data-a="paysw"><i class="ti ti-${r.pay === 'transfer' ? 'qrcode' : 'cash'}"></i>${r.pay ? (r.pay === 'cash' ? 'จ่ายเงินสด' : 'จ่ายโอน') + ' · แตะเพื่อเปลี่ยนเป็น' + (r.pay === 'cash' ? 'โอน' : 'เงินสด') : 'ยังไม่ระบุวิธีจ่าย · แตะเพื่อเลือก'}</button>` : '') +
     '<button class="act" data-a="booked"><i class="ti ti-arrow-back-up"></i>กลับเป็นรอคิว</button>';
   const note = r.note ? `<div class="pq"><i class="ti ti-message-dots" style="color:var(--c-note)"></i> ${esc(r.note)}</div>` : '';
-  openSheet(head + (r.status === 'block' ? '' : tags) + note + acts, (a, b) => {
+  openSheet(head + note + acts, (a, b) => {
     if (a === 'done') return doneFlow(r.id);
     if (a === 'qp') return doneFlow(r.id, +b.dataset.v);
     if (a === 'redeemq') return redeemInQueue(r);
@@ -1120,7 +1120,7 @@ function rowSheet(r) {
         x => act({ action: 'price', id: r.id, pay: x }, 'บันทึกวิธีจ่ายแล้ว'));
     }
     if (a === 'move') return moveSheet(r, B.d.date);
-    if (a === 'cancel') return askConfirm(`ลูกค้าแจ้งยกเลิกคิว ${r.time} ${r.name}?`, 'ยกเลิกคิว', () => act({ action: 'cancel', id: r.id }, 'ยกเลิกแล้ว'));
+    if (a === 'cancel') return askConfirm(`ยกเลิกคิว ${r.time} ${r.name}?`, 'ยกเลิกคิว', () => act({ action: 'cancel', id: r.id }, 'ยกเลิกแล้ว'));
     act({ action: a, id: r.id }, { done: 'เสร็จแล้ว', noshow: 'บันทึกว่าไม่มา', unblock: 'เปิดรับคิวแล้ว', booked: 'กลับเป็นรอคิวแล้ว' }[a]);
   });
 }
@@ -2406,7 +2406,7 @@ function manualHtml(s) {
     <li>การ์ดบนสุด = คิวตอนนี้ (หรือคิวถัดไป) กด <i class="ti ti-check"></i> เมื่อตัดเสร็จ → เลือกราคา → (ถ้าตั้งพร้อมเพย์ไว้) QR รับเงิน → ลูกค้าได้แต้มอัตโนมัติ</li>
     <li>ด้านขวาของการ์ด: <i class="ti ti-users"></i> ทั้งหมด · <i class="ti ti-check"></i> เสร็จ · <i class="ti ti-hourglass"></i> รอ</li>
     <li>เปลี่ยนวัน: <i class="ti ti-chevron-left"></i> <i class="ti ti-chevron-right"></i> ทีละวัน · แตะปุ่ม <i class="ti ti-calendar"></i> วันที่ = ปฏิทินทั้งเดือน (ตัวเลขทอง = จำนวนคิว · สีจาง = วันหยุดประจำ · สีแดง = หยุดพิเศษ) · <i class="ti ti-arrow-back-up"></i> วันนี้ = กลับวันนี้</li>
-    <li>แตะช่องที่มีคิว = <b>เมนูคิว</b>: หัวบอกเวลา ชื่อ ระดับ เบอร์ (แตะเพื่อโทร) · <b>คิดเงิน</b> (แตะราคาที่ใช้บ่อย 3 อันดับ หรือ "อื่น ๆ") · เลื่อนเวลา · ไม่มา · ลูกค้าแจ้งยกเลิกคิว</li>
+    <li>แตะช่องที่มีคิว = <b>เมนูคิว</b>: หัวบอกเวลา ชื่อ ระดับ เบอร์ (แตะเพื่อโทร) · <b>คิดเงิน</b> (แตะราคาที่ใช้บ่อย 3 อันดับ หรือ "อื่น ๆ") · เลื่อนเวลา · ไม่มา · ยกเลิกคิว · ป้ายแลกได้ / เคยไม่มา / เลื่อนบ่อย อยู่ข้างชื่อ</li>
     <li><b>แลกรางวัล</b> (ขึ้นในเมนูคิวเมื่อลูกค้าแต้มพอ): รางวัลไอคอน <i class="ti ti-scissors"></i> = ตัดฟรี แลกแล้วคิวเสร็จเลย ไม่ต้องคิดเงิน · รางวัลอื่น (เช่น สระฟรี) แลกแล้วกลับมาคิดเงินค่าตัดตามปกติ · อยากให้รางวัลไหนเป็นตัดฟรี ตั้งไอคอนเป็นกรรไกรในหน้าสมาชิกและรางวัล</li>
     <li>คิดเงิน: เลือกราคา → เลือก เงินสด / โอน (ตั้งพร้อมเพย์หรือ QR ธนาคารไว้ จะมี QR ให้ลูกค้าสแกน) · คิวที่เสร็จแล้ว แตะเพื่อแก้ราคา เปลี่ยนวิธีจ่าย หรือกลับเป็นรอคิว</li>
     <li>แตะช่องว่าง = เพิ่มคิวเวลานั้น หรือปิดช่วงไม่รับคิว</li>
