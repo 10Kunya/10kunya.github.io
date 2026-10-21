@@ -636,6 +636,22 @@ function termsHtml(t) {
       ${t.note ? t.note.split(/\n+/).filter(Boolean).map(x => `<li style="color:var(--text)">${esc(x)}</li>`).join('') : ''}</ul></div>`;
 }
 
+// สรุปโปรโมชั่น (เฉพาะที่เปิดอยู่) — หน้าตาเดียวกับเงื่อนไขสมาชิก
+function promoHtml(t) {
+  const days = b => b.days.length === 7 ? 'ทุกวัน' : [1, 2, 3, 4, 5, 6, 0].filter(n => b.days.indexOf(n) >= 0).map(n => WD[n]).join(' ');
+  const card = (ic, title, big, sub) => `<div class="tm-r" style="align-items:flex-start;gap:14px;padding:14px 0">
+    <i class="ti ti-${ic} au" style="font-size:24px;margin-top:2px"></i><span style="flex:1"><b style="font-weight:500">${title}</b><span class="mu" style="display:block">${sub}</span></span>
+    <span class="au tm-n" style="font-size:24px">${big}</span></div>`;
+  const items = t.boosts.map(b => card('bolt', `แต้มคูณ ${days(b)} ${b.from}–${b.to}`, '×' + b.mult, 'จองหรือมาตัดช่วงเวลานี้ ได้แต้มคูณ ' + b.mult))
+    .concat(t.birthdayBonus ? [card('cake', 'โบนัสเดือนเกิด', '+' + t.birthdayBonus + '<small style="font-size:13px"> แต้ม</small>', 'มาตัดครั้งแรกในเดือนเกิด (ปีละครั้ง) · เลือกเดือนเกิดในหน้าสมาชิก')] : [])
+    .concat(t.referralBonus ? [card('users-plus', 'ชวนเพื่อน', '+' + t.referralBonus + '<small style="font-size:13px"> แต้ม</small>', 'เพื่อนใหม่ใส่เบอร์คุณตอนจอง พอมาตัดครั้งแรก ได้แต้มทั้งคู่')] : []);
+  return `<div class="tm">${logoTag(64, 'display:block;margin:0 auto 12px')}
+    <div class="tm-t">โปรโมชั่น</div>
+    <div class="mu">แต้มพิเศษที่ร้านจัดอยู่ตอนนี้</div>
+    ${items.length ? items.join('') : '<div class="mu" style="text-align:center;padding:30px 0">ตอนนี้ยังไม่มีโปรโมชั่น</div>'}
+    <ul class="mu" style="margin-top:14px"><li>แต้มไม่มีวันหมดอายุ · สะสมแลกรางวัลที่ร้าน</li></ul></div>`;
+}
+
 async function copyText(text) {
   try { await navigator.clipboard.writeText(text); toast('คัดลอกแล้ว'); }
   catch (e) {
@@ -1265,15 +1281,13 @@ function setDirty() {
 }
 
 // เงื่อนไขสมาชิก: เปิดเต็มจอให้ลูกค้าดู (ใช้ค่าที่บันทึกแล้ว)
-const termsBtn = () => `<button class="btn line" data-a="terms" style="margin-bottom:8px;color:var(--gold);border-color:var(--gold-line)"><i class="ti ti-file-description"></i> เงื่อนไขสมาชิก · เปิดให้ลูกค้าดู</button>`;
-function showTerms() {
-  const s = B.setSaved;
-  const sh = openSheet(termsHtml({ tiers: s.tiers, rewards: s.rewards, boosts: s.boosts.filter(b => b.on !== false), note: s.memberNote || '',
-    birthdayBonus: s.birthdayOn ? s.birthdayBonus : 0, referralBonus: s.referralOn ? s.referralBonus : 0 }));
-  sh.classList.add('full');
-}
+const showBtn = (a, ic, label) => `<button class="btn line" data-a="${a}" style="margin-bottom:14px;color:var(--gold);border-color:var(--gold-line)"><i class="ti ti-${ic}"></i> ${label} · เปิดให้ลูกค้าดู</button>`;
+const termsData = s => ({ tiers: s.tiers, rewards: s.rewards, boosts: s.boosts.filter(b => b.on !== false), note: s.memberNote || '',
+  birthdayBonus: s.birthdayOn ? s.birthdayBonus : 0, referralBonus: s.referralOn ? s.referralBonus : 0 });
+function showTerms() { openSheet(termsHtml(termsData(B.setSaved))).classList.add('full'); }
+function showPromo() { openSheet(promoHtml(termsData(B.setSaved))).classList.add('full'); }
 function menuHtml(s, sel) {
-  return termsBtn() + Object.keys(SET_PAGES).map(k => `<button class="menu-it ${k === sel ? 'sel' : ''}" data-a="page" data-p="${k}">
+  return Object.keys(SET_PAGES).map(k => `<button class="menu-it ${k === sel ? 'sel' : ''}" data-a="page" data-p="${k}">
     <span class="mic"><i class="ti ${SET_PAGES[k][0]}"></i></span>
     <span style="flex:1;min-width:0">${SET_PAGES[k][1]}<span class="mu" style="display:block">${SET_PAGES[k][2](s)}</span></span>
     <i class="ti ti-chevron-right mu"></i></button>`).join('');
@@ -1313,7 +1327,6 @@ function renderSettings() {
   if (!pg) {
     $('#app').innerHTML = `<div class="set">
       <div class="head"><span class="sv brand">ตั้งค่า</span></div>
-      ${termsBtn()}
       ${Object.keys(SET_PAGES).map(k => `<button class="menu-it" data-a="page" data-p="${k}">
         <span class="mic"><i class="ti ${SET_PAGES[k][0]}"></i></span>
         <span style="flex:1;min-width:0">${SET_PAGES[k][1]}<span class="mu" style="display:block">${SET_PAGES[k][2](s)}</span></span>
@@ -1390,7 +1403,7 @@ const PAGE_BODY = {
       ${dateField('nun', s.notice.until, new Date().toISOString().slice(0, 10), 'ไม่กำหนด', 'var(--gold)')}
       ${s.notice.until ? '<button data-a="nuclr" class="mu" style="padding:8px" aria-label="ไม่กำหนดวัน"><i class="ti ti-x"></i></button>' : ''}</div>
     <div class="mu">ไม่ใส่วันที่ = แสดงจนกว่าจะปิดสวิตช์ · เลยวันที่แล้วซ่อนเอง</div>`,
-  member: s => `
+  member: s => `${showBtn('terms', 'file-description', 'เงื่อนไขสมาชิก')}
     <div class="mu" style="padding:4px 0 4px"><i class="ti ti-medal"></i> ระดับสมาชิก</div>
     <div class="mu" style="font-size:12px;margin-bottom:8px">วัดจากแต้มสะสมรวม · แลกรางวัลแล้วระดับไม่ลด</div>
     ${s.tiers.map((t, i) => `<div class="ed tier">
@@ -1412,7 +1425,7 @@ const PAGE_BODY = {
     <div class="mu" style="padding:16px 0 8px"><i class="ti ti-file-description"></i> ข้อความเพิ่มเติมในเงื่อนไข (ไม่ใส่ก็ได้)</div>
     <textarea id="mnote" rows="3" maxlength="300" placeholder="เช่น แลกได้ครั้งละ 1 รางวัล · ใช้กับตัวเองเท่านั้น">${esc(s.memberNote || '')}</textarea>
     <div class="mu" style="margin-top:4px">ขึ้นบรรทัดใหม่ = ข้อใหม่ · ลูกค้าเห็นในหน้าเงื่อนไข</div>`,
-  promo: s => `
+  promo: s => `${showBtn('promoshow', 'speakerphone', 'สรุปโปรโมชั่น')}
     <div class="card pcard ${s.birthdayOn ? '' : 'off'}">
       <div class="prow"><i class="ti ti-cake au"></i><span style="flex:1">โบนัสเดือนเกิด<span class="mu" style="display:block">${s.birthdayOn ? 'มาตัดครั้งแรกในเดือนเกิด ปีละครั้ง' : 'ปิดอยู่ · ลูกค้าจะไม่เห็นปุ่มเลือกเดือนเกิด'}</span></span>${sw(s.birthdayOn, 'data-a="tog" data-k="birthdayOn"')}</div>
       ${s.birthdayOn ? `<div class="prow" style="justify-content:flex-end">${stepTop('birthdayBonus', s.birthdayBonus, 'แต้ม')}</div>` : ''}
@@ -1453,7 +1466,7 @@ const PAGE_BODY = {
       <span style="flex:1;min-width:0">${l}<span class="mu" style="display:block;word-break:break-all">${u}</span></span>
       <button class="au" data-a="copy" data-u="${u}" aria-label="คัดลอกลิงก์" style="font-size:20px;padding:10px"><i class="ti ti-copy"></i></button></div>`).join('')}`,
   push: () => '<div id="pushbox"><div class="mu">กำลังตรวจ…</div></div>',
-  manual: () => `<div class="man">${MANUAL}</div>`,
+  manual: s => `<div class="man">${manualHtml(B.setSaved || s)}</div>`,
   account: s => `
     <button class="act" data-a="pin"><i class="ti ti-key"></i>เปลี่ยน PIN</button>
     <a class="act" href="${esc(s.sheetUrl)}" target="_blank"><i class="ti ti-table"></i>เปิดชีตข้อมูลคิว</a>
@@ -1605,6 +1618,7 @@ $('#app').addEventListener('click', async e => {
   const a = b.dataset.a, s = B.set;
   if (a === 'page') return openSetPage(b.dataset.p);
   if (a === 'terms') return showTerms();
+  if (a === 'promoshow') return showPromo();
   if (a === 'back') return leaveSetPage();
   readSettings();
   if (a === 'adv-' || a === 'adv+') { s.advanceDays = Math.max(0, Math.min(30, s.advanceDays + (a === 'adv+' ? 1 : -1))); return renderSettings(); }
@@ -2169,9 +2183,28 @@ async function pushAction(a, b) {
 }
 
 /*** ---------- คู่มือ ---------- ***/
-const MANUAL = `
+// สรุปค่าที่ตั้งไว้สำหรับคู่มือ (คู่มือเปลี่ยนตามหน้าตั้งค่าเสมอ)
+const MAN = {
+  hours: s => {   // จ. อ. พฤ. ศ. อา. 10:00–20:00 · ส. 10:00–21:00 · หยุด พ.
+    const order = [1, 2, 3, 4, 5, 6, 0], g = [];
+    order.filter(n => s.week[n].on).forEach(n => {
+      const k = s.week[n].open + '–' + s.week[n].close, x = g.find(y => y.k === k);
+      x ? x.d.push(WD[n]) : g.push({ k, d: [WD[n]] });
+    });
+    const off = order.filter(n => !s.week[n].on).map(n => WD[n]);
+    return g.map(x => (g.length > 1 ? x.d.join(' ') + ' ' : '') + x.k).join(' · ') + (off.length ? ' · หยุด ' + off.join(' ') : ' · เปิดทุกวัน');
+  },
+  days: d => d.length === 7 ? 'ทุกวัน' : [1, 2, 3, 4, 5, 6, 0].filter(n => d.indexOf(n) >= 0).map(n => WD[n]).join(' '),
+  breaks: s => { const b = (s.breaks || []).filter(x => x.on !== false); return b.length ? b.map(x => x.from + '–' + x.to + ' (' + MAN.days(x.days) + ')').join(' · ') : 'ยังไม่ได้ตั้ง'; },
+  v: x => `<b class="au">${x}</b>`
+};
+function manualHtml(s) {
+  const v = MAN.v, tiers = s.tiers.slice().sort((a, b) => a.min - b.min);
+  const boosts = (s.boosts || []).filter(b => b.on !== false);
+  return `
   <h4><i class="ti ti-list"></i> หน้าคิว</h4>
   <ul>
+    <li>ร้านเปิด ${v(MAN.hours(s))} · คิวละ ${v(s.slotMin + ' นาที')} · ช่วงพัก ${v(MAN.breaks(s))}</li>
     <li>การ์ดบนสุด = คิวตอนนี้ (หรือคิวถัดไป) กด <i class="ti ti-check"></i> เมื่อตัดเสร็จ → เลือกราคา → (ถ้าตั้งพร้อมเพย์ไว้) QR รับเงิน → ลูกค้าได้แต้มอัตโนมัติ</li>
     <li>ด้านขวาของการ์ด: <i class="ti ti-users"></i> ทั้งหมด · <i class="ti ti-check"></i> เสร็จ · <i class="ti ti-hourglass"></i> รอ</li>
     <li>เปลี่ยนวัน: <i class="ti ti-chevron-left"></i> <i class="ti ti-chevron-right"></i> ทีละวัน · แตะปุ่ม <i class="ti ti-calendar"></i> วันที่ = ปฏิทินทั้งเดือน (ตัวเลขทอง = จำนวนคิว · สีจาง = วันหยุดประจำ · สีแดง = หยุดพิเศษ) · <i class="ti ti-arrow-back-up"></i> วันนี้ = กลับวันนี้</li>
@@ -2185,7 +2218,7 @@ const MANUAL = `
     <li><i class="ti ti-lock"></i> = ช่างปิดช่วงนี้ · <i class="ti ti-tools-kitchen-2"></i> พัก = ช่วงพักประจำ (ลูกค้าเห็นเป็นคิวเต็ม) แตะเพื่อเปิดรับคิวเฉพาะวันนั้น</li>
     <li>ขอบแดงประ + ชื่อขีดฆ่าสีแดง = ลูกค้าเพิ่งยกเลิกวันนี้ ช่องว่างแล้ว แตะเพื่อลงคิวใหม่ได้</li>
     <li><i class="ti ti-walk"></i> = walk-in ไม่มีเบอร์</li>
-    <li>ป้ายลูกค้า: <i class="ti ti-gift au"></i> <span class="au">ทอง</span> = แต้มพอแลกรางวัล · <i class="ti ti-alert-triangle" style="color:var(--c-noshow)"></i> <span style="color:var(--c-noshow)">แดง</span> = เคยไม่มาหลายครั้ง · <i class="ti ti-arrows-exchange" style="color:var(--c-move)"></i> <span style="color:var(--c-move)">ส้ม</span> = เลื่อนคิวเองบ่อย · <i class="ti ti-message-dots" style="color:var(--c-note)"></i> <span style="color:var(--c-note)">ฟ้า</span> = ลูกค้าฝากข้อความ (แตะคิวเพื่ออ่าน)</li>
+    <li>ป้ายลูกค้า: <i class="ti ti-gift au"></i> <span class="au">ทอง</span> = แต้มพอแลกรางวัล · <i class="ti ti-alert-triangle" style="color:var(--c-noshow)"></i> <span style="color:var(--c-noshow)">แดง</span> = ไม่มาถึง ${v(s.noshowWarn + ' ครั้ง')} · <i class="ti ti-arrows-exchange" style="color:var(--c-move)"></i> <span style="color:var(--c-move)">ส้ม</span> = ${s.moveWarn ? 'เลื่อนคิวเองถึง ' + v(s.moveWarn + ' ครั้ง') : 'เลื่อนบ่อย (ปิดอยู่)'} · <i class="ti ti-message-dots" style="color:var(--c-note)"></i> <span style="color:var(--c-note)">ฟ้า</span> = ลูกค้าฝากข้อความ (แตะคิวเพื่ออ่าน)</li>
   </ul>
   <h4><i class="ti ti-bell-ringing"></i> แจ้งเตือน</h4>
   <ul>
@@ -2201,12 +2234,14 @@ const MANUAL = `
   <h4><i class="ti ti-arrows-exchange"></i> เลื่อนคิว</h4>
   <ul>
     <li>ช่างเลื่อน/ลากย้ายคิวที่มีเบอร์ → มีหน้าต่าง "แจ้งลูกค้า" ข้อความพิมพ์ไว้แล้วพร้อมลิงก์ตั๋ว กด "ส่ง SMS" (ส่งจากมือถือช่าง) หรือ "โทรแทน" · ตั๋วลูกค้าขึ้นป้าย "ร้านเลื่อนคิวให้"</li>
-    <li>ลูกค้าเลื่อนเองได้ตามจำนวนครั้งที่ตั้ง และต้องก่อนเวลาคิวตามที่ตั้ง (เกินนั้นต้องโทรหาร้าน)</li>
-    <li>ลูกค้าเลื่อนเองครบตามที่ตั้ง ขึ้นป้ายส้ม "เลื่อนบ่อย" · มาตัด 1 ครั้งลดลง 1 · ล้างได้ในบัตรสมาชิก</li>
+    <li>ลูกค้าเลื่อนเองได้ ${v(s.moveLimit ? s.moveLimit + ' ครั้งต่อคิว' : 'ไม่จำกัดครั้ง')} · เลื่อน/ยกเลิกเองได้ ${v(s.moveCutoff ? 'ถึง ' + hmText(s.moveCutoff) + ' ชม. ก่อนคิว' : 'ตลอดจนถึงเวลาคิว')} (เกินนั้นต้องโทรหาร้าน)</li>
+    <li>${s.moveWarn ? 'ลูกค้าเลื่อนเองครบ ' + v(s.moveWarn + ' ครั้ง') + ' ขึ้นป้ายส้ม "เลื่อนบ่อย"' : 'ป้าย "เลื่อนบ่อย" ปิดอยู่'} · มาตัด 1 ครั้งลดลง 1 · ล้างได้ในบัตรสมาชิก</li>
+    <li>ลูกค้าจองล่วงหน้าได้ ${v(s.advanceDays + ' วัน')}</li>
   </ul>
   <h4><i class="ti ti-receipt"></i> ราคาและรับเงิน</h4>
   <ul>
-    <li>กดเสร็จ → แตะปุ่มราคา (กรอบทอง = ราคาที่ลูกค้าคนนี้จ่ายครั้งก่อน) · "อื่น ๆ" กดตัวเลขเอง · "ข้าม" ไม่ใส่ราคา</li>
+    <li>กดเสร็จ → แตะปุ่มราคา ${v(s.prices.length ? s.prices.map(x => '฿' + x).join(' ') : '(ยังไม่ได้ตั้ง)')} (กรอบทอง = ราคาที่ลูกค้าคนนี้จ่ายครั้งก่อน) · "อื่น ๆ" กดตัวเลขเอง · "ข้าม" ไม่ใส่ราคา</li>
+    <li>พร้อมเพย์: ${v(s.payment && s.payment.promptpay ? 'ตั้งแล้ว ' + maskPP(s.payment.promptpay) + ' · QR ขึ้นหลังเลือกราคา' : 'ยังไม่ได้ตั้ง · เลือกราคาแล้วบันทึกทันที')}</li>
     <li><b>ตั้งพร้อมเพย์ไว้แล้ว:</b> เลือกราคา → QR พร้อมยอดขึ้นทันที ลูกค้าสแกนจ่าย ไม่ต้องพิมพ์ยอด</li>
     <li>เงินเข้าหรือยัง ดูจากแจ้งเตือนในแอปธนาคารของร้าน (ระบบนี้รู้เองไม่ได้) แล้วกด <b>"ได้รับเงินโอนแล้ว"</b> · จ่ายเงินสดกด <b>"ลูกค้าจ่ายเงินสด"</b> · ปิดหน้าต่าง QR = ยังไม่บันทึก</li>
     <li>ยังไม่ตั้งพร้อมเพย์: เลือกราคาแล้วบันทึกทันที ไม่มีหน้า QR</li>
@@ -2216,19 +2251,22 @@ const MANUAL = `
   <h4><i class="ti ti-users"></i> สมาชิกและแต้ม</h4>
   <ul>
     <li>ลูกค้าเป็นสมาชิกอัตโนมัติด้วยเบอร์โทร แต้มไม่มีหมดอายุ</li>
-    <li>ระดับวัดจากแต้มสะสมรวม แลกรางวัลแล้วระดับไม่ลด ระดับสูงได้แต้มต่อครั้งมากขึ้น · ลูกค้าขึ้นระดับจะมีแถบทองแจ้ง</li>
+    <li>ระดับวัดจากแต้มสะสมรวม แลกรางวัลแล้วระดับไม่ลด · ลูกค้าขึ้นระดับจะมีแถบทองแจ้ง</li>
+    <li>ระดับตอนนี้: ${tiers.map((t, i) => v(esc(t.name)) + ' ' + (i ? 'สะสมครบ ' + t.min : 'เริ่มต้น') + ' ได้ +' + t.earn + '/ครั้ง').join(' · ')}</li>
+    <li>รางวัล: ${s.rewards.length ? s.rewards.map(r => v(esc(r.name)) + ' ' + r.cost + ' แต้ม').join(' · ') : v('ยังไม่มี')}</li>
     <li>แตะชื่อสมาชิก → แลกรางวัล (ลูกค้าแลกเองไม่ได้) / ปรับแต้ม / ดูประวัติ</li>
     <li>แลกผิด: กด "ยกเลิก" ที่รายการแลกในประวัติ (ได้เฉพาะของวันนี้) แต้มคืนครบ</li>
     <li>บัตรสมาชิก: แก้ชื่อ · เปลี่ยนเบอร์ · รวมบัญชี (ลูกค้ามี 2 เบอร์) · เดือนเกิด · ล้างค่าเตือนไม่มา / ค่าเลื่อน · ลบข้อมูลตามที่ลูกค้าขอ</li>
     <li>"ลงแต้มลูกค้าเก่า" ใช้กับลูกค้าที่มีบัตรสะสมกระดาษ</li>
-    <li>ด้านบนแท็บสมาชิก: สรุปเดือนนี้ และ "ลูกค้าที่หายไป" พร้อมปุ่มโทร</li>
-    <li>ลูกค้าถามเงื่อนไข: ตั้งค่า → ปุ่มบนสุด "เงื่อนไขสมาชิก · เปิดให้ลูกค้าดู" (เต็มจอ ตัวใหญ่) · ลูกค้าดูเองได้ในหน้าสมาชิก</li>
+    <li>ด้านบนแท็บสมาชิก: สรุปเดือนนี้ และ "ลูกค้าที่หายไป" (มาแล้ว 2 ครั้งขึ้นไป และไม่มาเกิน ${v(s.lostDays + ' วัน')}) พร้อมปุ่มโทร</li>
+    <li>ลูกค้าถามเงื่อนไข: ตั้งค่า → สมาชิกและรางวัล → ปุ่ม "เงื่อนไขสมาชิก · เปิดให้ลูกค้าดู" (เต็มจอ ตัวใหญ่) · ลูกค้าดูเองได้ในหน้าสมาชิก</li>
+    <li>ลูกค้าถามโปรโมชั่น: ตั้งค่า → โปรโมชั่น → ปุ่ม "สรุปโปรโมชั่น · เปิดให้ลูกค้าดู" (แสดงเฉพาะโปรที่เปิดอยู่)</li>
   </ul>
   <h4><i class="ti ti-bolt"></i> โปรโมชั่นแต้ม</h4>
   <ul>
-    <li>แต้มคูณ: ตั้งวัน + ช่วงเวลา + ×2–×5 คิวในช่วงนั้นได้แต้มคูณ ลูกค้าเห็นป้ายตอนเลือกเวลา</li>
-    <li>เดือนเกิด: ลูกค้าเลือกเดือนเกิดในบัตรสมาชิก มาตัดครั้งแรกของเดือนนั้นได้โบนัส (ปีละครั้ง)</li>
-    <li>ชวนเพื่อน: ลูกค้าใหม่ใส่เบอร์ผู้ชวนตอนจอง พอมาตัดครั้งแรกเสร็จ ได้แต้มทั้งคู่</li>
+    <li>แต้มคูณ: ตั้งวัน + ช่วงเวลา + ×2–×5 คิวในช่วงนั้นได้แต้มคูณ ลูกค้าเห็นป้ายตอนเลือกเวลา · ตอนนี้ ${v(boosts.length ? boosts.map(b => MAN.days(b.days) + ' ' + b.from + '–' + b.to + ' ×' + b.mult).join(' · ') : 'ไม่มี')}</li>
+    <li>เดือนเกิด: ${s.birthdayOn ? v('เปิด +' + s.birthdayBonus + ' แต้ม') : v('ปิดอยู่')} · ลูกค้าเลือกเดือนเกิดในบัตรสมาชิก มาตัดครั้งแรกของเดือนนั้นได้โบนัส (ปีละครั้ง)</li>
+    <li>ชวนเพื่อน: ${s.referralOn ? v('เปิด ได้คนละ +' + s.referralBonus + ' แต้ม') : v('ปิดอยู่')} · ลูกค้าใหม่ใส่เบอร์ผู้ชวนตอนจอง พอมาตัดครั้งแรกเสร็จ ได้แต้มทั้งคู่</li>
     <li>ทุกโปรมีสวิตช์เปิด/ปิด กดแล้วบันทึกทันที</li>
   </ul>
   <h4><i class="ti ti-chart-bar"></i> สรุป</h4>
@@ -2250,9 +2288,9 @@ const MANUAL = `
     <li>ตั้งวันหยุดทับวันที่มีคิว ระบบจะบอกจำนวนคิวที่ต้องโทรแจ้งลูกค้า</li>
     <li><b>ราคา:</b> ปุ่มราคาตอนกดเสร็จ · <b>การรับเงิน:</b> พร้อมเพย์ (เบอร์มือถือ / เลขบัตรประชาชน) + ชื่อบัญชี + บัญชีธนาคารสำรอง — ฝั่งช่างเท่านั้น ลูกค้าไม่เห็น · <b>ประกาศถึงลูกค้า:</b> ข้อความบนหน้าจอง ตั้งวันหมดได้</li>
     <li><b>สมาชิกและรางวัล:</b> ระดับ / รางวัล ใช้ปุ่ม − + · แตะไอคอนรางวัลเพื่อเปลี่ยนรูป · ข้อความเพิ่มเติมในเงื่อนไข</li>
-    <li><b>การเตือน:</b> ไม่มากี่ครั้งขึ้นป้าย · ลูกค้าเลื่อนเองได้กี่ครั้ง · เลื่อน/ยกเลิกเองได้ถึงกี่ชั่วโมงก่อนคิว · เลื่อนกี่ครั้งขึ้นป้าย · ลูกค้าหายไปกี่วัน (ตั้ง 0 = ไม่จำกัด)</li>
+    <li><b>การเตือน:</b> ไม่มากี่ครั้งขึ้นป้าย · ลูกค้าเลื่อนเองได้กี่ครั้ง · เลื่อน/ยกเลิกเองได้ถึงกี่ชั่วโมงก่อนคิว · เลื่อนกี่ครั้งขึ้นป้าย · ลูกค้าหายไปกี่วัน (ตั้ง 0 = ไม่จำกัด) · วันที่แสดงแบบ วัน เดือน ปี (เช่น 23 ต.ค. 69)</li>
     <li><b>QR และลิงก์ร้าน:</b> QR สำหรับ<b>จองคิว</b> (ไม่ใช่ QR รับเงิน) · คัดลอกลิงก์ หรือบันทึกรูปไปปริ้นแปะหน้าร้าน · เปลี่ยนโลโก้แล้วให้บันทึกรูปใหม่</li>
-    <li><b>เงื่อนไขสมาชิก:</b> ปุ่มบนสุดของหน้าตั้งค่า เปิดเต็มจอให้ลูกค้าอ่าน</li>
+    <li><b>เปิดให้ลูกค้าดู:</b> หมวดสมาชิกและรางวัล = ปุ่มเงื่อนไขสมาชิก · หมวดโปรโมชั่น = ปุ่มสรุปโปรโมชั่น (เต็มจอ ตัวใหญ่ ใช้ค่าที่บันทึกแล้ว)</li>
     <li>หน้าที่มีปุ่ม "บันทึก" ต้องกดบันทึกก่อนออก · บัญชีช่าง: เปลี่ยน PIN · เปิดชีตข้อมูล · ออกจากระบบ</li>
   </ul>
   <h4><i class="ti ti-hand-finger"></i> เคล็ดลับ</h4>
@@ -2260,7 +2298,9 @@ const MANUAL = `
     <li>กดค้างที่ปุ่มแถบล่าง หรือปุ่มไอคอนที่ไม่มีตัวหนังสือ = ดูว่าปุ่มนั้นทำอะไร (กดค้างแล้วปล่อย ปุ่มจะไม่ทำงาน)</li>
     <li>ปุ่มย้อนกลับของมือถือ / ปัดหน้าต่างลง = ปิดหน้าต่างที่เปิดอยู่</li>
     <li>เพิ่มแอปช่างลงหน้าจอ: Chrome กด ⋮ → "เพิ่มไปยังหน้าจอหลัก" · iPhone Safari กดแชร์ → "เพิ่มไปยังหน้าจอโฮม"</li>
-  </ul>`;
+  </ul>
+  <div class="mu" style="margin-top:16px">ตัวเลขสีทองในคู่มือ = ค่าที่ตั้งไว้ตอนนี้ เปลี่ยนตามหน้าตั้งค่าเอง</div>`;
+}
 
 const NAV_TIPS = {
   list: ['คิว', 'ดูตารางคิวทั้งวัน กดค้างที่คิวเพื่อลากย้าย'],

@@ -439,6 +439,22 @@ function termsHtml(t) {
       ${t.note ? t.note.split(/\n+/).filter(Boolean).map(x => `<li style="color:var(--text)">${esc(x)}</li>`).join('') : ''}</ul></div>`;
 }
 
+// สรุปโปรโมชั่น (เฉพาะที่เปิดอยู่) — หน้าตาเดียวกับเงื่อนไขสมาชิก
+function promoHtml(t) {
+  const days = b => b.days.length === 7 ? 'ทุกวัน' : [1, 2, 3, 4, 5, 6, 0].filter(n => b.days.indexOf(n) >= 0).map(n => WD[n]).join(' ');
+  const card = (ic, title, big, sub) => `<div class="tm-r" style="align-items:flex-start;gap:14px;padding:14px 0">
+    <i class="ti ti-${ic} au" style="font-size:24px;margin-top:2px"></i><span style="flex:1"><b style="font-weight:500">${title}</b><span class="mu" style="display:block">${sub}</span></span>
+    <span class="au tm-n" style="font-size:24px">${big}</span></div>`;
+  const items = t.boosts.map(b => card('bolt', `แต้มคูณ ${days(b)} ${b.from}–${b.to}`, '×' + b.mult, 'จองหรือมาตัดช่วงเวลานี้ ได้แต้มคูณ ' + b.mult))
+    .concat(t.birthdayBonus ? [card('cake', 'โบนัสเดือนเกิด', '+' + t.birthdayBonus + '<small style="font-size:13px"> แต้ม</small>', 'มาตัดครั้งแรกในเดือนเกิด (ปีละครั้ง) · เลือกเดือนเกิดในหน้าสมาชิก')] : [])
+    .concat(t.referralBonus ? [card('users-plus', 'ชวนเพื่อน', '+' + t.referralBonus + '<small style="font-size:13px"> แต้ม</small>', 'เพื่อนใหม่ใส่เบอร์คุณตอนจอง พอมาตัดครั้งแรก ได้แต้มทั้งคู่')] : []);
+  return `<div class="tm">${logoTag(64, 'display:block;margin:0 auto 12px')}
+    <div class="tm-t">โปรโมชั่น</div>
+    <div class="mu">แต้มพิเศษที่ร้านจัดอยู่ตอนนี้</div>
+    ${items.length ? items.join('') : '<div class="mu" style="text-align:center;padding:30px 0">ตอนนี้ยังไม่มีโปรโมชั่น</div>'}
+    <ul class="mu" style="margin-top:14px"><li>แต้มไม่มีวันหมดอายุ · สะสมแลกรางวัลที่ร้าน</li></ul></div>`;
+}
+
 async function copyText(text) {
   try { await navigator.clipboard.writeText(text); toast('คัดลอกแล้ว'); }
   catch (e) {
@@ -844,7 +860,11 @@ function helpSheet() {
     d.moveLimit ? `เลื่อนเวลาเองได้ ${d.moveLimit} ครั้งต่อคิว` : '',
     d.moveCutoff ? `เลื่อนหรือยกเลิกเองได้ถึง ${hm(d.moveCutoff)} ก่อนเวลาคิว` : ''
   ].filter(Boolean);
+  const times = [...new Set(d.days.filter(x => !x.closed && x.open).map(x => x.open + '–' + x.close))];
   openSheet(`<div class="help"><h3>วิธีใช้</h3>
+    <h4><i class="ti ti-building-store"></i> เวลาร้าน</h4>
+    <ul><li>เปิด ${esc(times.length === 1 ? times[0] : d.open + '–' + d.close + ' (แต่ละวันอาจต่างกัน ดูได้ตอนเลือกวัน)')} · ${esc(closedText(d.closedDays))}</li>
+      <li>จองล่วงหน้าได้ ${d.days.length - 1} วัน (นับจากวันนี้)</li></ul>
     <h4><i class="ti ti-calendar-plus"></i> จองคิว</h4>
     <ul><li>เลือกวัน แล้วเลื่อนวงล้อ (หรือกด ‹ ›) ไปเวลาที่อยากมา</li>
       <li>ถ้าเวลานั้นมีคิวแล้ว จะมีเวลาใกล้ที่สุดที่ว่างให้แตะเลือก</li>
