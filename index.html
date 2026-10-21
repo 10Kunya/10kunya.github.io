@@ -321,6 +321,18 @@ body.tab-l .k b{font-size:34px}
 .ppbox{background:#fff;border-radius:16px;padding:10px;display:inline-block;margin-top:6px}
 .ppbox img{display:block;width:min(240px,62vw);height:auto;image-rendering:pixelated}
 .btn.off{opacity:.35;pointer-events:none;background:transparent;color:var(--mute);border:1px solid var(--line2)}
+/* หน้าต่างเพิ่มคิว: กระชับ */
+.addq .hs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -20px 6px;padding:0 20px 2px}
+.addq .hs::-webkit-scrollbar{display:none}
+.addq .hs .chip{flex:0 0 auto;padding:6px 12px !important;font-size:16px !important;line-height:1.25;white-space:nowrap}
+.addq .hs .chip small{font-size:12px !important}
+.addq .tg{display:grid;grid-template-columns:repeat(auto-fill,minmax(50px,1fr));gap:4px;margin-bottom:6px}
+.addq .tg .chip{padding:6px 0 !important;font-size:17px !important;border-radius:8px}
+.addq .lab2{color:var(--mute);font-size:13px;margin:6px 0 4px}
+.addq .lab2:empty{display:none}
+.addq .nrow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.addq .field input{padding:8px 0 !important}
+.addq h3{font-size:20px !important}
 .numd{font-family:var(--serif);font-variant-numeric:lining-nums;font-size:40px;color:var(--gold);text-align:center;min-height:56px;border-bottom:1px solid var(--line2);margin-bottom:14px}
 .npad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .npad button{border:1px solid var(--line2);border-radius:12px;padding:12px 0;font-family:var(--serif);font-variant-numeric:lining-nums;font-size:24px}
@@ -1121,69 +1133,96 @@ async function moveSheet(r, date) {
 
 async function addSheet(time, date) {
   date = date || (B.d.date < B.d.today ? B.d.today : B.d.date);
-  const day = await dayData(date);
+  let day = await dayData(date);
   if (!day) return;
   if (!B.recent) B.recent = (await api('barberMembers', '').catch(() => [])).slice(0, 8);
-  const free = freeAhead(day);
-  const st = { pick: free.indexOf(time) >= 0 ? time : '', who: null, find: false };   // who = null คือไม่ระบุชื่อ
-  const foundHtml = () => (st.found || []).map(m => `<button class="chip" data-a="pickm" data-p="${esc(m.phone)}">${esc(m.name || '—')}<small>${esc(m.phone)}</small></button>`).join('');
-  const html = () => `<h3>เพิ่มคิว</h3>${dayChips(day.date)}${slotChips(free, st.pick)}
-    <div class="mu" style="margin:12px 0 8px"><i class="ti ti-users"></i> ลูกค้า</div>
-    <div class="chips" style="grid-template-columns:repeat(2,1fr);margin-bottom:8px">
-      <button class="chip ${!st.who && !st.find ? 'on' : ''}" data-a="walk"><i class="ti ti-walk"></i> ไม่ระบุ</button>
-      <button class="chip ${st.find ? 'on' : ''}" data-a="find"><i class="ti ti-search"></i> ค้นหา / ใหม่</button>
-      ${B.recent.map(m => `<button class="chip ${st.who && st.who.phone === m.phone ? 'on' : ''}" data-a="who" data-p="${esc(m.phone)}">${esc(m.name || m.phone)}<small>${esc(m.phone.slice(-4))}</small></button>`).join('')}
-    </div>
-    ${st.find ? `<div class="field"><i class="ti ti-search"></i><input id="fq" value="${esc(st.q || '')}" placeholder="เบอร์ (4 ตัวท้ายก็ได้) หรือชื่อ" autocomplete="off"></div>
-      <div id="fr" class="chips" style="grid-template-columns:repeat(2,1fr);margin:8px 0">${foundHtml()}</div>
-      <div class="mu" style="margin-top:4px">ลูกค้าใหม่</div>
-      <div class="field"><i class="ti ti-user"></i><input id="an" value="${esc(st.nn || '')}" placeholder="ชื่อ" maxlength="40"></div>
-      <div class="field"><i class="ti ti-phone"></i><input id="ap" value="${esc(st.np || '')}" placeholder="เบอร์โทร" inputmode="tel" maxlength="12"></div>` : ''}
-    ${(st.who || st.find) && day.refBonus ? (st.ref == null
-      ? `<button class="mu" data-a="refon" style="padding:10px 0"><i class="ti ti-users-plus"></i> เพิ่มเบอร์คนชวน (ลูกค้าใหม่ · ได้คนละ +${day.refBonus} แต้ม)</button>`
-      : `<div class="mu" style="margin-top:10px"><i class="ti ti-users-plus"></i> เบอร์คนชวน (ได้คนละ +${day.refBonus} แต้ม เมื่อลูกค้าใหม่มาตัดครั้งแรก)</div>
-        <div class="field"><i class="ti ti-phone"></i><input id="aref" value="${esc(st.ref)}" placeholder="เบอร์ของคนที่ชวนมา" inputmode="tel" maxlength="12">
-        <button data-a="refoff" class="mu" style="padding:6px" aria-label="ไม่ใส่เบอร์คนชวน"><i class="ti ti-x"></i></button></div>`) : ''}
+  let free = freeAhead(day);
+  // mode: walk = ไม่ระบุ · who = ลูกค้าที่เลือก · new = ลูกค้าใหม่ (พิมพ์ชื่อ + เบอร์)
+  const st = { pick: free.indexOf(time) >= 0 ? time : '', mode: 'walk', who: null, q: '', found: null, nn: '', np: '', ref: null };
+  const chip = (on, a, attrs, label, sub) => `<button class="chip ${on ? 'on' : ''}" data-a="${a}" ${attrs}>${label}${sub ? `<small>${sub}</small>` : ''}</button>`;
+  const custHtml = () => {
+    const list = st.found || B.recent;
+    return chip(st.mode === 'walk', 'walk', '', '<i class="ti ti-walk"></i> ไม่ระบุ') +
+      list.map(m => chip(st.mode === 'who' && st.who && st.who.phone === m.phone, 'who', `data-p="${esc(m.phone)}"`, esc(m.name || m.phone), esc(m.phone.slice(-4)))).join('') +
+      chip(st.mode === 'new', 'newc', '', '<i class="ti ti-plus"></i> ลูกค้าใหม่');
+  };
+  const newHtml = () => st.mode === 'new' ? `<div class="nrow">
+      <div class="field"><i class="ti ti-user"></i><input id="an" value="${esc(st.nn)}" placeholder="ชื่อ" maxlength="40"></div>
+      <div class="field"><i class="ti ti-phone"></i><input id="ap" value="${esc(st.np)}" placeholder="เบอร์" inputmode="tel" maxlength="12"></div></div>` : '';
+  const refHtml = () => st.mode !== 'walk' && day.refBonus ? (st.ref == null
+    ? `<button class="mu" data-a="refon" style="padding:8px 0 2px;font-size:14px"><i class="ti ti-users-plus"></i> เพิ่มเบอร์คนชวน (+${day.refBonus} แต้มทั้งคู่)</button>`
+    : `<div class="field"><i class="ti ti-users-plus"></i><input id="aref" value="${esc(st.ref)}" placeholder="เบอร์คนชวน (ลูกค้าใหม่ · +${day.refBonus} แต้มทั้งคู่)" inputmode="tel" maxlength="12">
+        <button data-a="refoff" class="mu" style="padding:6px" aria-label="ไม่ใส่เบอร์คนชวน"><i class="ti ti-x"></i></button></div>`) : '';
+  const btnLabel = () => {
+    const who = st.mode === 'who' && st.who ? (st.who.name || st.who.phone) : st.mode === 'new' && st.nn ? st.nn : 'walk-in';
+    return st.pick ? `เพิ่ม ${esc(who)} · ${st.pick}` : 'เลือกเวลาก่อน';
+  };
+  const html = () => `<h3 style="margin-bottom:10px">เพิ่มคิว</h3>
+    <div class="hs">${openDays(day.date).map(ds => chip(ds === day.date, 'day', `data-d="${ds}"`, ds === B.d.today ? 'วันนี้' : WD[wday(ds)], ymd(ds)[2] + ' ' + MO[ymd(ds)[1] - 1])).join('')}</div>
+    <div class="lab2">${free.length ? `เวลาว่าง ${free.length} ช่วง` : ''}</div>
+    ${free.length ? `<div class="tg sv">${free.map(t => chip(t === st.pick, 'pick', `data-t="${t}"`, t)).join('')}</div>` : '<div class="mu" style="padding:6px 0 10px">วันนี้ไม่มีช่วงว่าง</div>'}
+    <div class="lab2">ลูกค้า</div>
+    <div class="hs" id="cs">${custHtml()}</div>
+    <div class="field" style="margin-top:2px"><i class="ti ti-search"></i><input id="fq" value="${esc(st.q)}" placeholder="ค้นหาชื่อ / เบอร์ (4 ตัวท้ายก็ได้)" autocomplete="off"></div>
+    <div id="nr">${newHtml()}</div>
+    <div id="rf">${refHtml()}</div>
     <div class="err" id="aerr"></div>
-    <button class="btn" data-a="walkin" style="margin-top:16px">${st.pick ? `เพิ่ม ${esc(st.who ? st.who.name || st.who.phone : 'walk-in')} · ${st.pick}` : 'เพิ่มคิว'}</button>
-    <button class="btn line" data-a="block" style="margin-top:10px"><i class="ti ti-lock"></i> ปิดช่วงนี้ ไม่รับคิว</button>`;
+    <button class="btn" data-a="walkin" id="abtn" style="margin-top:12px">${btnLabel()}</button>
+    <button class="link" data-a="block" style="padding:10px 0 0"><i class="ti ti-lock"></i> ปิดช่วงนี้ ไม่รับคิว</button>`;
+  // วาดเฉพาะบางส่วน (ช่องที่กำลังพิมพ์ไม่หลุดโฟกัส)
+  const part = () => {
+    $('#cs', sh).innerHTML = custHtml(); $('#nr', sh).innerHTML = newHtml(); $('#rf', sh).innerHTML = refHtml(); $('#abtn', sh).innerHTML = btnLabel();
+    bind();
+  };
+  const bind = () => {
+    if ($('#an', sh)) $('#an', sh).oninput = e => { st.nn = e.target.value; $('#abtn', sh).innerHTML = btnLabel(); };
+    if ($('#ap', sh)) $('#ap', sh).oninput = e => { st.np = e.target.value; };
+    if ($('#aref', sh)) $('#aref', sh).oninput = e => { st.ref = e.target.value; };
+  };
   const draw = () => {
     $('.sbody', sh).innerHTML = html();
-    if ($('#aref', sh)) $('#aref', sh).oninput = e => { st.ref = e.target.value; };
-    if (!st.find) return;
-    $('#an', sh).oninput = e => { st.nn = e.target.value; };
-    $('#ap', sh).oninput = e => { st.np = e.target.value; };
+    bind();
+    const on = $('.hs .chip.on', sh); if (on) on.scrollIntoView({ inline: 'center', block: 'nearest' });
     let tm;
-    $('#fq', sh).addEventListener('input', e => {
+    $('#fq', sh).oninput = e => {
       st.q = e.target.value;
       clearTimeout(tm);
       tm = setTimeout(async () => {
-        const q = e.target.value.trim();
-        const list = q ? await api('barberMembers', q).catch(() => []) : [];
-        st.found = list.slice(0, 6);
-        $('#fr', sh).innerHTML = foundHtml();
+        const q = st.q.trim();
+        if (!q) { st.found = null; return part(); }
+        const list = (await api('barberMembers', q).catch(() => [])).slice(0, 8);
+        if (st.q.trim() !== q) return;
+        st.found = list;
+        if (!list.length) {   // ไม่เจอ → เปิดช่องลูกค้าใหม่ พร้อมเติมชื่อหรือเบอร์ที่พิมพ์ไว้
+          st.mode = 'new'; st.who = null;
+          if (/^\d[\d\s-]*$/.test(q)) st.np = q.replace(/\D/g, ''); else st.nn = q;
+        }
+        part();
       }, 300);
-    });
+    };
   };
-  const sh = openSheet('', (a, b) => {
-    if (a === 'day') return addSheet(st.pick, b.dataset.d);
-    if (a === 'pick') { st.pick = b.dataset.t; return draw(); }
-    if (a === 'walk') { st.who = null; st.find = false; return draw(); }
-    if (a === 'refon') { st.ref = ''; draw(); return $('#aref', sh).focus(); }
-    if (a === 'refoff') { st.ref = null; return draw(); }
-    if (a === 'find') { st.who = null; st.find = true; draw(); return $('#fq', sh).focus(); }
-    if (a === 'who') { st.who = B.recent.find(m => m.phone === b.dataset.p); st.find = false; return draw(); }
-    if (a === 'pickm') { st.who = (st.found || []).find(m => m.phone === b.dataset.p); st.find = false; return draw(); }
+  const sh = openSheet('', async (a, b) => {
+    if (a === 'day') {
+      const nd = await dayData(b.dataset.d); if (!nd) return;
+      day = nd; free = freeAhead(day); if (free.indexOf(st.pick) < 0) st.pick = '';
+      return draw();
+    }
+    if (a === 'pick') { st.pick = b.dataset.t; $('.tg .chip.on', sh) && $('.tg .chip.on', sh).classList.remove('on'); b.classList.add('on'); $('#abtn', sh).innerHTML = btnLabel(); $('#aerr', sh).textContent = ''; return; }
+    if (a === 'walk') { st.mode = 'walk'; st.who = null; return part(); }
+    if (a === 'who') { st.mode = 'who'; st.who = (st.found || B.recent).find(m => m.phone === b.dataset.p); return part(); }
+    if (a === 'newc') { st.mode = 'new'; st.who = null; part(); return $('#an', sh).focus(); }
+    if (a === 'refon') { st.ref = ''; part(); return $('#aref', sh).focus(); }
+    if (a === 'refoff') { st.ref = null; return part(); }
     if (!st.pick) { $('#aerr', sh).textContent = 'เลือกเวลาก่อน'; return; }
     if (a === 'walkin') {
-      let name = st.who ? st.who.name : '', phone = st.who ? st.who.phone : '';
-      if (st.find) { name = st.nn || ''; phone = st.np || ''; }
-      const referrer = st.ref ? st.ref.replace(/\D/g, '') : '';
+      const name = st.mode === 'who' ? st.who.name : st.mode === 'new' ? st.nn : '';
+      const phone = st.mode === 'who' ? st.who.phone : st.mode === 'new' ? st.np : '';
+      const referrer = st.mode !== 'walk' && st.ref ? st.ref.replace(/\D/g, '') : '';
       act({ action: 'walkin', date: day.date, time: st.pick, name, phone, referrer }, 'เพิ่มคิว ' + st.pick + (referrer ? ' · มีคนชวน' : ''));
     }
     if (a === 'block') act({ action: 'block', date: day.date, time: st.pick }, 'ปิดช่วง ' + st.pick);
   });
-  sh.classList.add('big');
+  sh.classList.add('big', 'addq');
   draw();
 }
 
