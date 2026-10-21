@@ -1240,7 +1240,7 @@ const clone = o => JSON.parse(JSON.stringify(o));
 const SET_PAGES = {
   shop: ['ti-building-store', 'ร้าน', s => `${s.open}–${s.close} · คิวละ ${s.slotMin} นาที · ${closedText(s.closedDays)}${s.breaks.some(b => b.on !== false) ? ' · มีช่วงพัก' : ''}`],
   price: ['ti-receipt', 'ราคา', s => s.prices.length ? s.prices.map(v => '฿' + v).join(' · ') : 'ยังไม่ได้ตั้ง'],
-  pay: ['ti-qrcode', 'การรับเงิน', s => s.payment.promptpay ? 'พร้อมเพย์ ' + maskPP(s.payment.promptpay) + ' · QR ขึ้นหลังเลือกราคา' : 'ยังไม่ตั้งพร้อมเพย์'],
+  pay: ['ti-qrcode', 'การรับเงิน', s => [s.payment.promptpay ? 'พร้อมเพย์ ' + maskPP(s.payment.promptpay) : '', s.bankQrVer ? 'QR ธนาคาร' : ''].filter(Boolean).join(' · ') || 'ยังไม่ตั้ง'],
   notice: ['ti-speakerphone', 'ประกาศถึงลูกค้า', s => s.notice.on && s.notice.text ? `<span class="au">เปิดอยู่</span> · ${esc(s.notice.text.slice(0, 24))}${s.notice.text.length > 24 ? '…' : ''}` : 'ปิดอยู่'],
   member: ['ti-medal', 'สมาชิกและรางวัล', s => `${s.tiers.length} ระดับ · ${s.rewards.length} รางวัล`],
   promo: ['ti-bolt', 'โปรโมชั่น', s => { const all = [s.birthdayOn, s.referralOn].concat(s.boosts.map(b => b.on !== false)); return `เปิด ${all.filter(Boolean).length} จาก ${all.length}`; }],
@@ -1314,6 +1314,10 @@ function pageBody(pg, s) {
 function afterPage(pg, s) {
   if (pg === 'share') drawQr(CUSTOMER_URL);
   if (pg === 'push') renderPush();
+  if (pg === 'pay') {
+    $('#bqfile').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) pickBankQr(f); };
+    if (B.setSaved.bankQrVer && BQ.ver !== B.setSaved.bankQrVer) ensureBankQr(B.setSaved.bankQrVer).then(() => { if (B.setPage === 'pay') renderSettings(); });
+  }
   if (pg === 'notice') $('#ntx').oninput = e => { $('#ntc').textContent = e.target.value.length; };
   if (pg === 'shop') $('#lgfile').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) cropSheet(f); };
   if (pg === 'shop') $('#sh').onchange = e => {
@@ -1403,7 +1407,16 @@ const PAGE_BODY = {
     <div class="mu" style="padding:16px 0 0"><i class="ti ti-building-bank"></i> บัญชีธนาคาร (สำรอง ไว้ตอบลูกค้า)</div>
     <div class="field"><i class="ti ti-building-bank"></i><input id="bkname" maxlength="40" placeholder="ธนาคาร" value="${esc(s.payment.bankName)}"></div>
     <div class="field"><i class="ti ti-hash"></i><input id="bkacc" inputmode="numeric" maxlength="20" placeholder="เลขบัญชี" value="${esc(s.payment.bankAcc)}"></div>
-    ${B.setSaved.payment.promptpay ? '<button class="btn line" data-a="ppshow" style="margin-top:16px"><i class="ti ti-qrcode"></i> เปิด QR ไม่ระบุยอด</button>' : ''}
+    <div class="mu" style="padding:16px 0 6px"><i class="ti ti-photo"></i> QR จากแอปธนาคาร (สร้างในแอปธนาคาร แล้วบันทึกรูปมาอัปโหลด)</div>
+    <div class="row" style="gap:12px;border:0;padding-top:0">
+      ${B.setSaved.bankQrVer && BQ.ver === B.setSaved.bankQrVer ? `<img src="${BQ.data}" alt="" style="width:64px;height:64px;object-fit:contain;background:#fff;border-radius:8px">` : `<span class="lgph" style="width:64px;height:64px;border-radius:8px">${B.setSaved.bankQrVer ? 'มีแล้ว' : 'QR'}</span>`}
+      <span style="flex:1" class="mu">${B.setSaved.bankQrVer ? 'ใช้ตอนเก็บเงิน ' + (B.setSaved.payment.promptpay ? '(สลับจาก QR พร้อมเพย์ได้)' : '(ลูกค้าพิมพ์ยอดเอง)') : 'ยังไม่ได้อัปโหลด · บันทึกทันทีเมื่อเลือกรูป'}</span></div>
+    <div class="chips" style="grid-template-columns:1fr 1fr">
+      <button class="chip" data-a="bqpick"><i class="ti ti-upload"></i> ${B.setSaved.bankQrVer ? 'เปลี่ยนรูป' : 'อัปโหลดรูป QR'}</button>
+      ${B.setSaved.bankQrVer ? '<button class="chip" data-a="bqdel" style="color:var(--c-noshow)"><i class="ti ti-trash"></i> ลบ</button>' : ''}</div>
+    <input type="file" id="bqfile" accept="image/*" style="display:none">
+    ${B.setSaved.payment.promptpay ? '<button class="btn line" data-a="ppshow" style="margin-top:16px"><i class="ti ti-qrcode"></i> เปิด QR พร้อมเพย์ ไม่ระบุยอด</button>' : ''}
+    ${B.setSaved.bankQrVer ? '<button class="btn line" data-a="bqshow" style="margin-top:10px"><i class="ti ti-photo"></i> เปิด QR ธนาคาร</button>' : ''}
     ${B.setSaved.payment.bankAcc ? `<div class="card" style="padding:12px 14px;margin-top:12px;border-color:var(--line2)"><div class="mu">บัญชีสำรอง</div>${esc(B.setSaved.payment.bankName)} · <span class="sv au" style="font-size:19px">${esc(B.setSaved.payment.bankAcc)}</span>
       ${B.setSaved.payment.accName ? `<div class="mu">${esc(B.setSaved.payment.accName)}</div>` : ''}</div>` : ''}
     <div class="mu" style="margin-top:12px">เงินเข้าหรือยัง ดูจากแจ้งเตือนในแอปธนาคารของร้าน แล้วกด "ได้รับเงินโอนแล้ว"</div>`,
@@ -1643,7 +1656,15 @@ $('#app').addEventListener('click', async e => {
   if (a === 'rdel') { s.rewards.splice(+b.dataset.i, 1); return renderSettings(); }
   if (a === 'hdel') { s.holidays = s.holidays.filter(h => h !== b.dataset.h); return renderSettings(); }
   if (a === 'lgpick') return $('#lgfile').click();
-  if (a === 'ppshow') return paySheet(0, null, B.setSaved.payment.promptpay, B.setSaved.payment.accName);
+  if (a === 'ppshow') return paySheet(0, null, 'pp', { pp: B.setSaved.payment.promptpay, ppName: B.setSaved.payment.accName, bq: B.setSaved.bankQrVer });
+  if (a === 'bqshow') return paySheet(0, null, 'bank', { pp: B.setSaved.payment.promptpay, ppName: B.setSaved.payment.accName, bq: B.setSaved.bankQrVer });
+  if (a === 'bqpick') return $('#bqfile').click();
+  if (a === 'bqdel') return askConfirm('ลบรูป QR ธนาคาร?', 'ลบ', async () => {
+    const r = await api('barberSetBankQr', '', true).catch(() => null);
+    if (!r || !r.ok) return;
+    BQ = { ver: '', data: '' }; store.del('k10_bq'); B.setSaved.bankQrVer = B.set.bankQrVer = '';
+    renderSettings(); toast('ลบ QR ธนาคารแล้ว'); loadDay(B.date).catch(() => {});
+  }, 'ไม่ลบ');
   if (a === 'lgshape') return saveLogo(null, b.dataset.s, false, 'เปลี่ยนรูปทรงแล้ว');
   if (a === 'lgdel') return askConfirm('ลบโลโก้ร้าน?', 'ลบโลโก้', () => saveLogo('', 'circle', true, 'ลบโลโก้แล้ว · กลับเป็น ๑๐'), 'ไม่ลบ');
   if (a === 'wtog') { const w = s.week[+b.dataset.n]; w.on = !w.on; return renderSettings(); }
@@ -1964,7 +1985,7 @@ async function doneFlow(id) {
   if (!r) return;
   const save = (extra, p, pay) => act(Object.assign({ action: 'done', id: id, price: p, pay: pay || '' }, extra),
     'เสร็จแล้ว' + (p ? ' · ฿' + p : '') + (pay ? (pay === 'cash' ? ' เงินสด' : ' โอน') : ''));
-  const finish = extra => priceSheet(r, p => B.d.pp && p ? paySheet(p, pay => save(extra, p, pay)) : save(extra, p, ''));
+  const finish = extra => priceSheet(r, p => (B.d.pp || B.d.bq) && p ? paySheet(p, pay => save(extra, p, pay)) : save(extra, p, ''));
   if (r.phone) return finish({});
   if (!B.recent) B.recent = (await api('barberMembers', '').catch(() => [])).slice(0, 8);
   const st = { nn: '', np: '' };
@@ -2026,21 +2047,57 @@ function ppQrImg(id, amount) {
   return q.createImgTag(6, 12).replace('<img', '<img class="ppqr" alt="QR พร้อมเพย์"');
 }
 const maskPP = id => id ? (id.length === 10 ? id.slice(0, 3) + '-xxx-' + id.slice(6) : 'xxxx' + id.slice(-4)) : '';
-// หน้าจอรับเงิน: QR พร้อมยอด + ปุ่มได้รับเงินโอน / เงินสด (onPick ไม่ส่งมา = ดูอย่างเดียว)
-function paySheet(amount, onPick, pp, name) {
-  pp = pp || B.d.pp; name = name != null ? name : B.d.ppName;
+// รูป QR ธนาคาร: เก็บในเครื่อง โหลดใหม่เมื่อร้านเปลี่ยนรูป
+let BQ = store.get('k10_bq', { ver: '', data: '' });
+async function ensureBankQr(ver) {
+  if (!ver) return '';
+  if (BQ.ver === ver && BQ.data) return BQ.data;
+  const r = await api('barberBankQr').catch(() => null);
+  if (r && r.data) { BQ = r; store.set('k10_bq', r); }
+  return BQ.data;
+}
+// หน้าจอรับเงิน: QR พร้อมเพย์ (ใส่ยอดให้) หรือ QR ธนาคาร (ลูกค้าพิมพ์ยอดเอง) + ปุ่มได้รับเงินโอน / เงินสด
+// onPick ไม่ส่งมา = ดูอย่างเดียว · src = ข้อมูลร้าน (ค่าเริ่มต้นจากหน้าคิว)
+async function paySheet(amount, onPick, mode, src) {
+  src = src || B.d;
+  mode = mode || (src.pp ? 'pp' : 'bank');
+  const bq = mode === 'bank' ? await ensureBankQr(src.bq) : '';
+  const other = mode === 'pp' ? (src.bq ? 'bank' : '') : (src.pp ? 'pp' : '');
   const sh = stackSheet(`<div style="text-align:center">
-    <div class="mu">สแกนจ่าย · พร้อมเพย์</div>
+    <div class="mu">สแกนจ่าย · ${mode === 'pp' ? 'พร้อมเพย์' : 'QR ธนาคาร'}</div>
     ${amount ? `<div class="sv au" style="font-size:46px;line-height:1.2">฿${amount}</div>` : '<div class="mu" style="margin:6px 0">ไม่ระบุยอด · ลูกค้าใส่ยอดเอง</div>'}
-    <div class="ppbox">${ppQrImg(pp, amount)}</div>
-    <div class="mu" style="margin:8px 0 14px">${esc(name || '๑๐ กันยา')} · พร้อมเพย์ ${esc(maskPP(pp))}</div>
+    <div class="ppbox">${mode === 'pp' ? ppQrImg(src.pp, amount) : bq ? `<img src="${bq}" alt="QR ธนาคาร" style="image-rendering:auto">` : '<div class="mu" style="color:#555;padding:30px">โหลดรูป QR ไม่ได้</div>'}</div>
+    <div class="mu" style="margin:8px 0 ${other ? 6 : 14}px">${mode === 'pp' ? `${esc(src.ppName || '๑๐ กันยา')} · พร้อมเพย์ ${esc(maskPP(src.pp))}` : (amount ? `<span class="au">ลูกค้าพิมพ์ยอด ฿${amount} เอง</span>` : 'QR จากแอปธนาคารของร้าน')}</div>
+    ${other ? `<button class="link" data-a="sw" style="padding:6px;margin-bottom:8px"><i class="ti ti-switch-horizontal"></i> ใช้ ${other === 'pp' ? 'QR พร้อมเพย์ (ใส่ยอดให้)' : 'QR ธนาคาร'} แทน</button>` : ''}
     ${onPick ? `<button class="btn" data-a="tr"><i class="ti ti-check"></i> ได้รับเงินโอนแล้ว</button>
       <button class="btn line" data-a="cash" style="margin-top:10px"><i class="ti ti-cash"></i> ลูกค้าจ่ายเงินสด</button>
       <div class="mu" style="margin-top:10px">ปิดหน้าต่าง = ยังไม่บันทึก</div>` : ''}</div>`, a => {
       if (a === 'tr') onPick('transfer');
       if (a === 'cash') onPick('cash');
+      if (a === 'sw') { popSheet(); paySheet(amount, onPick, other, src); }
     });
   sh.classList.add('big');
+}
+// อัปโหลดรูป QR ธนาคาร: ย่อให้กว้างไม่เกิน 720px (QR ยังคมพอสแกน)
+function pickBankQr(file) {
+  const url = URL.createObjectURL(file), img = new Image();
+  img.onerror = () => toast('เปิดรูปนี้ไม่ได้');
+  img.onload = async () => {
+    const k = Math.min(1, 720 / img.width), c = document.createElement('canvas');
+    c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+    const g = c.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+    let data = c.toDataURL('image/png');
+    if (data.length > 380000) data = c.toDataURL('image/jpeg', .92);
+    URL.revokeObjectURL(url);
+    const r = await api('barberSetBankQr', data, false).catch(() => null);
+    if (!r) return;
+    if (!r.ok) return toast(r.msg);
+    BQ = { ver: r.ver, data: data }; store.set('k10_bq', BQ);
+    B.setSaved.bankQrVer = B.set.bankQrVer = r.ver;
+    renderSettings(); toast('บันทึก QR ธนาคารแล้ว'); loadDay(B.date).catch(() => {});
+  };
+  img.src = url;
 }
 
 // แป้นตัวเลข (ราคา) — ไม่ต้องเปิดคีย์บอร์ด
@@ -2254,10 +2311,11 @@ function manualHtml(s) {
   <h4><i class="ti ti-receipt"></i> ราคาและรับเงิน</h4>
   <ul>
     <li>กดเสร็จ → แตะปุ่มราคา ${v(s.prices.length ? s.prices.map(x => '฿' + x).join(' ') : '(ยังไม่ได้ตั้ง)')} (กรอบทอง = ราคาที่ลูกค้าคนนี้จ่ายครั้งก่อน) · "อื่น ๆ" กดตัวเลขเอง · "ข้าม" ไม่ใส่ราคา</li>
-    <li>พร้อมเพย์: ${v(s.payment && s.payment.promptpay ? 'ตั้งแล้ว ' + maskPP(s.payment.promptpay) + ' · QR ขึ้นหลังเลือกราคา' : 'ยังไม่ได้ตั้ง · เลือกราคาแล้วบันทึกทันที')}</li>
+    <li>พร้อมเพย์: ${v(s.payment && s.payment.promptpay ? 'ตั้งแล้ว ' + maskPP(s.payment.promptpay) : 'ยังไม่ได้ตั้ง')} · QR ธนาคาร: ${v(s.bankQrVer ? 'อัปโหลดแล้ว' : 'ยังไม่มี')}</li>
     <li><b>ตั้งพร้อมเพย์ไว้แล้ว:</b> เลือกราคา → QR พร้อมยอดขึ้นทันที ลูกค้าสแกนจ่าย ไม่ต้องพิมพ์ยอด</li>
     <li>เงินเข้าหรือยัง ดูจากแจ้งเตือนในแอปธนาคารของร้าน (ระบบนี้รู้เองไม่ได้) แล้วกด <b>"ได้รับเงินโอนแล้ว"</b> · จ่ายเงินสดกด <b>"ลูกค้าจ่ายเงินสด"</b> · ปิดหน้าต่าง QR = ยังไม่บันทึก</li>
-    <li>ยังไม่ตั้งพร้อมเพย์: เลือกราคาแล้วบันทึกทันที ไม่มีหน้า QR</li>
+    <li>QR จากแอปธนาคาร (อัปโหลดรูปในหน้าการรับเงิน): ใช้แทนหรือสลับกับพร้อมเพย์ได้ ลูกค้าต้องพิมพ์ยอดเอง (หน้าจอบอกยอดตัวใหญ่ไว้ให้)</li>
+    <li>ไม่ได้ตั้งทั้งพร้อมเพย์และ QR ธนาคาร: เลือกราคาแล้วบันทึกทันที ไม่มีหน้า QR</li>
     <li>แก้ทีหลัง: แตะคิวที่เสร็จแล้ว → ราคา (แก้ราคา) · จ่ายเงินสด/โอน (สลับวิธีจ่าย)</li>
     <li>ลูกค้าขอสแกนแบบใส่ยอดเอง / ถามเลขบัญชี: ตั้งค่า → การรับเงิน → "เปิด QR ไม่ระบุยอด" และบัญชีสำรอง</li>
   </ul>
@@ -2299,7 +2357,7 @@ function manualHtml(s) {
   <ul>
     <li><b>ร้าน:</b> โลโก้ร้าน (ยังไม่ตั้ง = ใช้ ๑๐ · เลือกรูป → ลากจัด/ซูม · เลือกวงกลมหรือมุมมน · บันทึกทันที · ลบโลโก้ = กลับเป็น ๑๐) · เวลาเปิด–ปิดแยกรายวัน (สวิตช์ = เปิด/หยุดวันนั้น · ปุ่มใช้เวลาเดียวกันทุกวัน) · ช่วงพักประจำ · คิวละกี่นาที · จองล่วงหน้ากี่วัน · วันหยุดพิเศษ · เบอร์ร้าน / แผนที่</li>
     <li>ตั้งวันหยุดทับวันที่มีคิว ระบบจะบอกจำนวนคิวที่ต้องโทรแจ้งลูกค้า</li>
-    <li><b>ราคา:</b> ปุ่มราคาตอนกดเสร็จ · <b>การรับเงิน:</b> พร้อมเพย์ (เบอร์มือถือ / เลขบัตรประชาชน) + ชื่อบัญชี + บัญชีธนาคารสำรอง — ฝั่งช่างเท่านั้น ลูกค้าไม่เห็น · <b>ประกาศถึงลูกค้า:</b> ข้อความบนหน้าจอง ตั้งวันหมดได้</li>
+    <li><b>ราคา:</b> ปุ่มราคาตอนกดเสร็จ · <b>การรับเงิน:</b> พร้อมเพย์ (เบอร์มือถือ / เลขบัตรประชาชน) + ชื่อบัญชี + รูป QR จากแอปธนาคาร + บัญชีธนาคารสำรอง — ฝั่งช่างเท่านั้น ลูกค้าไม่เห็น · <b>ประกาศถึงลูกค้า:</b> ข้อความบนหน้าจอง ตั้งวันหมดได้</li>
     <li><b>สมาชิกและรางวัล:</b> ระดับ / รางวัล ใช้ปุ่ม − + · แตะไอคอนรางวัลเพื่อเปลี่ยนรูป · ข้อความเพิ่มเติมในเงื่อนไข</li>
     <li><b>การเตือน:</b> ไม่มากี่ครั้งขึ้นป้าย · ลูกค้าเลื่อนเองได้กี่ครั้ง · เลื่อน/ยกเลิกเองได้ถึงกี่ชั่วโมงก่อนคิว · เลื่อนกี่ครั้งขึ้นป้าย · ลูกค้าหายไปกี่วัน (ตั้ง 0 = ไม่จำกัด) · วันที่แสดงแบบ วัน เดือน ปี (เช่น 23 ต.ค. 69)</li>
     <li><b>QR และลิงก์ร้าน:</b> QR สำหรับ<b>จองคิว</b> (ไม่ใช่ QR รับเงิน) · คัดลอกลิงก์ หรือบันทึกรูปไปปริ้นแปะหน้าร้าน · เปลี่ยนโลโก้แล้วให้บันทึกรูปใหม่</li>
