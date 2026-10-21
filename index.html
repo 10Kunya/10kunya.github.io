@@ -340,6 +340,7 @@ body.tab-l .k b{font-size:34px}
 .qhead .qt{font-size:26px}
 .qhead .qn{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:20px}
 .qhead .qn b{font-weight:500}
+.ib{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:1px solid;border-radius:50%;font-size:16px;flex-shrink:0}
 .qhead .qp{display:inline-flex;align-items:center;gap:6px;color:var(--text);border:1px solid var(--line2);border-radius:20px;padding:4px 12px;font-size:16px;font-variant-numeric:lining-nums}
 .qpay{flex-wrap:wrap;gap:10px}
 .qpay .qpl{display:flex;align-items:center;gap:14px;color:var(--gold);font-size:inherit}
@@ -1079,17 +1080,22 @@ async function moveAct(r, date, time) {
     <button class="link" data-a="x">ไม่แจ้ง</button>`, () => setTimeout(closeSheet, 300));
 }
 
+// ป้ายระดับแบบไอคอนอย่างเดียว (กดค้างดูชื่อระดับ)
+function tierIcon(m) {
+  const c = TIER_C[m.idx % TIER_C.length], ic = m.count > 1 && m.idx === m.count - 1 ? 'ti-crown' : 'ti-medal';
+  return `<span class="ib" role="button" aria-label="ระดับ${esc(m.tier)}" style="border-color:${c};color:${c}"><i class="ti ${ic}"></i></span>`;
+}
 function rowSheet(r) {
   if (!r) return;
   const m = r.m;
   // ป้ายอื่น (แลกได้ / เคยไม่มา / เลื่อนบ่อย) ข้างชื่อในส่วนหัว
   const tags = m && (m.gift || m.warn || m.mv) ? `<span style="display:contents">
-    ${m.gift ? '<span class="badge" style="background:var(--gold);color:var(--bg);border-color:var(--gold)"><i class="ti ti-gift"></i> แลกได้</span>' : ''}
+    ${m.gift ? '<span class="ib" role="button" aria-label="แต้มพอแลกรางวัล" style="background:var(--gold);color:var(--bg);border-color:var(--gold)"><i class="ti ti-gift"></i></span>' : ''}
     ${m.warn ? '<span class="badge" style="border-color:var(--c-noshow);color:var(--c-noshow)"><i class="ti ti-alert-triangle"></i> เคยไม่มา</span>' : ''}
     ${m.mv ? `<span class="badge" style="border-color:var(--c-move);color:var(--c-move)"><i class="ti ti-arrows-exchange"></i> เลื่อนบ่อย (${m.mv})</span>` : ''}</span>` : '';
   const head = r.status === 'block' ? `<h3><span class="sv au" style="font-size:24px">${esc(r.time)}</span> &nbsp;ปิดช่วงเวลา</h3>`
     : `<div class="qhead"><span class="sv au qt">${esc(r.time)}</span>
-        <span class="qn"><b>${esc(r.name)}</b>${m ? tierBadge({ idx: m.idx, count: m.count, name: m.tier }) : ''}${tags}</span>
+        <span class="qn"><b>${esc(r.name)}</b>${m ? tierIcon(m) : ''}${tags}</span>
       </div>`;
   let acts = '';
   if (r.status === 'booked') acts =
