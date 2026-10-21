@@ -250,6 +250,13 @@ function dateField(id, value, min, ph, color) {
   return `<label class="dfield" style="color:${color || 'var(--text)'}"><i class="ti ti-calendar"></i><span class="dtext ${value ? '' : 'ph'}" data-ph="${esc(ph)}">${value ? fmtD(value) : esc(ph)}</span>
     <input type="date" id="${id}" value="${esc(value || '')}" ${min ? `min="${min}"` : ''}></label>`;
 }
+// แตะตรงไหนของช่องก็เปิดปฏิทิน (บางเบราว์เซอร์ไม่เปิดเองเมื่อแตะช่องวันที่ที่มองไม่เห็น)
+document.addEventListener('click', e => {
+  const f = e.target.closest && e.target.closest('.dfield'); if (!f) return;
+  const i = f.querySelector('input');
+  e.preventDefault();
+  try { i.showPicker(); } catch (err) { i.focus(); }
+});
 document.addEventListener('input', e => {
   const f = e.target.closest && e.target.closest('.dfield'); if (!f) return;
   const t = f.querySelector('.dtext'), v = e.target.value;
