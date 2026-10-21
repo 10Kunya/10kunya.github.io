@@ -171,6 +171,18 @@ button[aria-label],a[aria-label]{-webkit-touch-callout:none;-webkit-user-select:
 .hbtn{display:flex;gap:14px;flex-shrink:0}
 .hbtn button{white-space:nowrap}
 @media (max-width:360px){ .hbtn{gap:8px} .head .brand{font-size:21px} }
+.promo{border:1px solid var(--gold-line);border-radius:12px;margin-bottom:18px;overflow:hidden}
+.promo-h{display:flex;align-items:center;gap:10px;width:100%;padding:11px 14px;text-align:left}
+.promo-h .ti:first-child{font-size:20px}
+.pchev{color:var(--mute);transition:transform .2s}
+.promo.open .pchev{transform:rotate(180deg)}
+.promo-b{display:none;padding:0 14px 6px;border-top:1px dashed var(--gold-line)}
+.promo.open .promo-b{display:block}
+.promo-i{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}
+.promo-i:last-child{border-bottom:0}
+.promo-i .ti{font-size:19px;margin-top:2px}
+.promo-i b{display:block;font-weight:500}
+.promo-i .mu{display:block}
 .shopnote{border:1px solid var(--gold-line);background:var(--gold-bg);border-radius:12px;padding:11px 14px;display:flex;gap:10px;align-items:flex-start;margin-bottom:18px;line-height:1.55;white-space:pre-line;word-break:break-word}
 .shopnote .ti{color:var(--gold);font-size:20px;margin-top:1px}
 .wa{position:absolute;top:50%;transform:translateY(-50%);width:38px;height:38px;border-radius:50%;background:var(--bg);border:1px solid var(--line2);color:var(--mute);font-size:18px;display:flex;align-items:center;justify-content:center;z-index:1}
@@ -497,6 +509,27 @@ async function load(except) {
 function noteField() {
   return `<div class="field" id="notebox"><i class="ti ti-message"></i><input id="nt" maxlength="100" placeholder="ฝากข้อความถึงช่าง (ไม่ใส่ก็ได้)" value="${esc(S.resched ? S.resched.note || '' : '')}"></div>`;
 }
+// โปรโมชั่นบนหน้าจอง: แถบพับได้ แตะเปิด/ปิด (จำไว้ในเครื่อง)
+function promoBox() {
+  const t = S.d.terms;
+  if (!t) return '';
+  const days = b => b.days.length === 7 ? 'ทุกวัน' : [1, 2, 3, 4, 5, 6, 0].filter(n => b.days.indexOf(n) >= 0).map(n => WD[n]).join(' ');
+  const items = t.boosts.map(b => ['bolt', `แต้มคูณ ×${b.mult}`, `${days(b)} ${b.from}–${b.to} · จองช่วงนี้ได้แต้ม ×${b.mult}`])
+    .concat(t.birthdayBonus ? [['cake', `เดือนเกิด +${t.birthdayBonus} แต้ม`, 'มาตัดครั้งแรกในเดือนเกิด · เลือกเดือนเกิดในหน้าสมาชิก']] : [])
+    .concat(t.referralBonus ? [['users-plus', `ชวนเพื่อน +${t.referralBonus} แต้ม`, 'เพื่อนใหม่ใส่เบอร์คุณตอนจอง ได้แต้มทั้งคู่']] : []);
+  if (!items.length) return '';
+  const open = store.get('k10_promo_open', false);
+  return `<div class="promo ${open ? 'open' : ''}" id="promo">
+    <button class="promo-h" data-promo="1" aria-expanded="${open}"><i class="ti ti-gift au"></i><span style="flex:1">โปรโมชั่น <span class="mu">${items.length} รายการ</span></span><i class="ti ti-chevron-down pchev"></i></button>
+    <div class="promo-b">${items.map(([ic, a, b]) => `<div class="promo-i"><i class="ti ti-${ic} au"></i><span><b>${a}</b><span class="mu">${b}</span></span></div>`).join('')}</div></div>`;
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('[data-promo]')) return;
+  const box = $('#promo'), open = !box.classList.contains('open');
+  box.classList.toggle('open', open); store.set('k10_promo_open', open);
+  e.target.closest('[data-promo]').setAttribute('aria-expanded', open);
+});
+
 function shopNoteHtml() {
   return S.d.notice ? `<div class="shopnote"><i class="ti ti-speakerphone"></i><span>${esc(S.d.notice)}</span></div>` : '';
 }
@@ -554,7 +587,7 @@ function showBook(resched, forOther) {
       ${S.resched ? '' : `<span class="hbtn"><button id="hlp" class="mu" style="font-size:13px;text-align:center"><i class="ti ti-help-circle au" style="font-size:22px"></i><br>วิธีใช้</button>
         <button id="mem" class="mu" style="font-size:13px;text-align:center"><i class="ti ti-id-badge-2 au" style="font-size:22px"></i><br>สมาชิก</button></span>`}
     </div>
-    ${shopNoteHtml()}${noticeHtml()}
+    ${shopNoteHtml()}${noticeHtml()}${S.resched ? '' : promoBox()}
     ${S.resched ? `<div class="mu" style="margin:-8px 0 16px"><i class="ti ti-pencil"></i> เลื่อนคิวเดิม ${dShort(S.resched.date)} ${esc(S.resched.time)}</div>` : ''}
     ${S.forOther ? '<div class="mu" style="margin:-8px 0 16px"><i class="ti ti-user-plus"></i> จองให้คนอื่น · ใส่ชื่อและเบอร์ของคนที่จะมาตัด</div>' : ''}
     <div class="chips" id="days" style="grid-template-columns:repeat(${Math.min(d.days.length, 4)},1fr);margin-bottom:22px"></div>
@@ -869,6 +902,7 @@ function helpSheet() {
     <ul><li>เลือกวัน แล้วเลื่อนวงล้อ (หรือกด ‹ ›) ไปเวลาที่อยากมา</li>
       <li>ถ้าเวลานั้นมีคิวแล้ว จะมีเวลาใกล้ที่สุดที่ว่างให้แตะเลือก</li>
       <li>ใส่ชื่อและเบอร์โทร (ครั้งแรกครั้งเดียว เครื่องนี้จำไว้ให้) แล้วกด "จองเวลา"</li>
+      <li>แตะแถบ "โปรโมชั่น" เพื่อดู / ซ่อนโปรที่ร้านจัดอยู่</li>
       <li>มีอะไรอยากบอกช่าง พิมพ์ในช่อง "ฝากข้อความถึงช่าง" ใต้เบอร์โทร (ไม่ใส่ก็ได้)</li>
       <li>จองให้คนอื่น: หลังจองเสร็จกด "จองคิวให้อีกคน"</li></ul>
     <h4><i class="ti ti-ticket"></i> ตั๋วคิว</h4>
