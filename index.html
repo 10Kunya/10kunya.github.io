@@ -1237,15 +1237,16 @@ const CUSTOMER_URL = SITE_BASE + 'book/';
 const clone = o => JSON.parse(JSON.stringify(o));
 
 /*** หน้าตั้งค่า = รายการหมวด → แตะเข้าแต่ละหมวด ***/
+// เรียงจากที่เกี่ยวกับการขาย / ใช้บ่อย ไปหาที่นาน ๆ ตั้งที
 const SET_PAGES = {
-  shop: ['ti-building-store', 'ร้าน', s => `${s.open}–${s.close} · คิวละ ${s.slotMin} นาที · ${closedText(s.closedDays)}${s.breaks.some(b => b.on !== false) ? ' · มีช่วงพัก' : ''}`],
   price: ['ti-receipt', 'ราคา', s => s.prices.length ? s.prices.map(v => '฿' + v).join(' · ') : 'ยังไม่ได้ตั้ง'],
   pay: ['ti-qrcode', 'การรับเงิน', s => [s.payment.promptpay ? 'พร้อมเพย์ ' + maskPP(s.payment.promptpay) : '', s.bankQrVer ? 'QR ธนาคาร' : ''].filter(Boolean).join(' · ') || 'ยังไม่ตั้ง'],
-  notice: ['ti-speakerphone', 'ประกาศถึงลูกค้า', s => s.notice.on && s.notice.text ? `<span class="au">เปิดอยู่</span> · ${esc(s.notice.text.slice(0, 24))}${s.notice.text.length > 24 ? '…' : ''}` : 'ปิดอยู่'],
-  member: ['ti-medal', 'สมาชิกและรางวัล', s => `${s.tiers.length} ระดับ · ${s.rewards.length} รางวัล`],
   promo: ['ti-bolt', 'โปรโมชั่น', s => { const all = [s.birthdayOn, s.referralOn].concat(s.boosts.map(b => b.on !== false)); return `เปิด ${all.filter(Boolean).length} จาก ${all.length}`; }],
-  warn: ['ti-alert-triangle', 'การเตือน', s => `ไม่มา ${s.noshowWarn} ครั้ง · เลื่อนเองได้ ${s.moveLimit || 'ไม่จำกัด'}${s.moveLimit ? ' ครั้ง' : ''} · หายเกิน ${s.lostDays} วัน`],
+  notice: ['ti-speakerphone', 'ประกาศถึงลูกค้า', s => s.notice.on && s.notice.text ? `<span class="au">เปิดอยู่</span> · ${esc(s.notice.text.slice(0, 24))}${s.notice.text.length > 24 ? '…' : ''}` : 'ปิดอยู่'],
+  shop: ['ti-building-store', 'ร้าน', s => `${s.open}–${s.close} · คิวละ ${s.slotMin} นาที · ${closedText(s.closedDays)}${s.breaks.some(b => b.on !== false) ? ' · มีช่วงพัก' : ''}`],
+  member: ['ti-medal', 'สมาชิกและรางวัล', s => `${s.tiers.length} ระดับ · ${s.rewards.length} รางวัล`],
   share: ['ti-qrcode', 'QR และลิงก์ร้าน', () => 'ให้ลูกค้าสแกนหรือกดลิงก์เพื่อจองคิว'],
+  warn: ['ti-alert-triangle', 'การเตือน', s => `ไม่มา ${s.noshowWarn} ครั้ง · เลื่อนเองได้ ${s.moveLimit || 'ไม่จำกัด'}${s.moveLimit ? ' ครั้ง' : ''} · หายเกิน ${s.lostDays} วัน`],
   push: ['ti-bell-ringing', 'แจ้งเตือนบนมือถือ', () => '<span id="pushsum">…</span>'],
   manual: ['ti-book', 'คู่มือการใช้งาน', () => 'วิธีใช้ทุกส่วนของหน้าช่าง'],
   account: ['ti-lock', 'บัญชีช่าง', () => 'เปลี่ยน PIN · ชีตข้อมูล · ออกจากระบบ']
@@ -1331,7 +1332,7 @@ function afterPage(pg, s) {
 function renderSettings() {
   const s = B.set;
   if (isTabL()) {   // แท็บเล็ตแนวนอน: หมวดซ้าย เนื้อหาขวา
-    const pg = B.setPage = B.setPage || 'shop';
+    const pg = B.setPage = B.setPage || Object.keys(SET_PAGES)[0];
     const [icon, title] = SET_PAGES[pg];
     $('#app').innerHTML = `<div class="md">
       <div class="set"><div class="head"><span class="sv brand">ตั้งค่า</span></div>${menuHtml(s, pg)}</div>
