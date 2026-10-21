@@ -138,6 +138,7 @@ button[aria-label],a[aria-label]{-webkit-touch-callout:none;-webkit-user-select:
 <style>
 .now-label{font-size:15px}
 .now-time{font-size:52px;line-height:1}
+.now-word{line-height:1.3;padding-top:.15em}   /* คำไทยมีวรรณยุกต์ด้านบน ไม่ให้ชนบรรทัดบน */
 .now-row{display:flex;align-items:center;gap:10px;margin-top:6px}
 .now-name{display:block;font-size:22px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .now-ring{width:50px;height:50px;font-size:24px}
@@ -856,7 +857,7 @@ function renderList() {
         </div>${nextLine(cur.r)}</div>`
     : `<div style="flex:1;min-width:0">
         <div class="mu now-label" style="${d.closed ? 'color:var(--warn)' : ''}">${d.closed ? 'วันหยุด' : today ? 'ไม่มีคิวรอ' : 'คิววัน' + WD_FULL[wday(d.date)]}</div>
-        <div class="sv now-time ${today ? '' : 'au'}" style="color:${today ? 'var(--dim)' : ''}">${today ? 'ว่าง' : ymd(d.date)[2] + ' ' + MO[ymd(d.date)[1] - 1]}</div></div>`;
+        <div class="sv now-time now-word ${today ? '' : 'au'}" style="color:${today || d.closed ? 'var(--dim)' : ''}">${today ? (d.closed ? 'หยุด' : 'ว่าง') : ymd(d.date)[2] + ' ' + MO[ymd(d.date)[1] - 1]}</div></div>`;
   $('#app').className = 'wrap fit';
   $('#app').innerHTML = `
     <div class="head" style="margin-bottom:10px">
