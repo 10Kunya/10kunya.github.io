@@ -151,7 +151,9 @@ button[aria-label],a[aria-label]{-webkit-touch-callout:none;-webkit-user-select:
 }
 .wheel .bx{font-family:var(--sans);font-size:11px;color:var(--gold);margin-left:2px}
 .wheel-mark{position:absolute;left:50%;top:6px;bottom:6px;width:calc(var(--iw) + 8px);margin-left:calc(var(--iw) / -2 - 4px);border:1px solid var(--gold-line);border-radius:12px;pointer-events:none}
-.msg{font-size:13px;margin-bottom:10px;min-height:20px}
+.msgrow{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px}
+.msg{font-size:13px;min-height:20px;flex:1;min-width:0}
+.whint{white-space:nowrap;font-size:12px;flex-shrink:0}
 .msg.warn{color:var(--warn)}
 .msg.ok{color:var(--ok)}
 .tk-top{padding:28px 18px 22px;text-align:center}
@@ -621,11 +623,10 @@ function showBook(resched, forOther) {
     ${S.resched ? `<div class="mu" style="margin:-8px 0 16px"><i class="ti ti-pencil"></i> เลื่อนคิวเดิม ${dShort(S.resched.date)} ${esc(S.resched.time)}</div>` : ''}
     ${S.forOther ? '<div class="mu" style="margin:-8px 0 16px"><i class="ti ti-user-plus"></i> จองให้คนอื่น · ใส่ชื่อและเบอร์ของคนที่จะมาตัด</div>' : ''}
     <div class="chips" id="days" style="grid-template-columns:repeat(${Math.min(d.days.length, 4)},1fr);margin-bottom:22px"></div>
-    <div class="mu" style="margin-bottom:6px"><i class="ti ti-clock"></i> เลื่อนเลือกเวลา</div>
     <div class="wheel-wrap"><button class="wa l" data-step="-1" aria-label="เวลาก่อนหน้า"><i class="ti ti-chevron-left"></i></button>
       <div class="wheel" id="wh"></div><div class="wheel-mark"></div>
       <button class="wa r" data-step="1" aria-label="เวลาถัดไป"><i class="ti ti-chevron-right"></i></button></div>
-    <div class="msg" id="msg"></div>
+    <div class="msgrow"><div class="msg" id="msg"></div><span class="mu whint"><i class="ti ti-arrows-horizontal"></i> เลื่อนเลือกเวลา</span></div>
     <div class="chips sv" id="sugs" style="grid-template-columns:repeat(3,1fr);margin-bottom:22px"></div>
     ${S.resched ? noteField() : `<div id="who"></div>${noteField()}
     ${d.referralBonus ? `<details id="refbox" style="margin-top:10px"><summary class="mu" style="cursor:pointer;list-style:none"><i class="ti ti-users-plus"></i> มีเพื่อนแนะนำ? (ลูกค้าใหม่ · ได้คนละ ${d.referralBonus || 0} แต้ม)</summary>
