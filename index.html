@@ -326,6 +326,9 @@ body.tab-l .k b{font-size:34px}
 .addq .hs::-webkit-scrollbar{display:none}
 .addq .hs .chip{flex:0 0 auto;padding:6px 12px !important;font-size:16px !important;line-height:1.25;white-space:nowrap}
 .addq .hs .chip small{font-size:12px !important}
+.addq .hs.days{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;overflow:visible;margin:0 0 6px;padding:0}
+.addq .hs.days .chip{padding:6px 0 !important;font-size:15px !important;min-width:0}
+.addq .hs.days .chip small{font-size:11px !important}
 .addq .tg{display:grid;grid-template-columns:repeat(auto-fill,minmax(50px,1fr));gap:4px;margin-bottom:6px}
 .addq .tg .chip{padding:6px 0 !important;font-size:17px !important;border-radius:8px}
 .addq .lab2{color:var(--mute);font-size:13px;margin:6px 0 4px}
@@ -1099,10 +1102,11 @@ function slotChips(list, pick) {
     list.map(t => `<button class="chip ${t === pick ? 'on' : ''}" data-a="pick" data-t="${t}" style="font-size:17px">${t}</button>`).join('') + '</div>';
 }
 
-// ปุ่มวัน 7 วันที่ร้านเปิด นับจากวันนี้
-function openDays(sel) {
+// ปุ่มวันที่ร้านเปิด นับจากวันนี้ (หน้าเพิ่มคิวใช้ 5 วัน · หน้าเลื่อนคิวใช้ 7 วัน)
+function openDays(sel, n) {
   const d = B.d, out = [];
-  for (let i = 0; out.length < 7 && i < 30; i++) {
+  n = n || 7;
+  for (let i = 0; out.length < n && i < 30; i++) {
     const ds = addDays(d.today, i);
     if (d.closedDays.indexOf(wday(ds)) < 0 && d.holidays.indexOf(ds) < 0) out.push(ds);
   }
@@ -1159,7 +1163,7 @@ async function addSheet(time, date) {
     return st.pick ? `เพิ่ม ${esc(who)} · ${st.pick}` : 'เลือกเวลาก่อน';
   };
   const html = () => `<h3 style="margin-bottom:10px">เพิ่มคิว</h3>
-    <div class="hs">${openDays(day.date).map(ds => chip(ds === day.date, 'day', `data-d="${ds}"`, ds === B.d.today ? 'วันนี้' : WD[wday(ds)], ymd(ds)[2] + ' ' + MO[ymd(ds)[1] - 1])).join('')}</div>
+    <div class="hs days">${openDays(day.date, 5).map(ds => chip(ds === day.date, 'day', `data-d="${ds}"`, ds === B.d.today ? 'วันนี้' : WD[wday(ds)], ymd(ds)[2] + ' ' + MO[ymd(ds)[1] - 1])).join('')}</div>
     <div class="lab2">${free.length ? `เวลาว่าง ${free.length} ช่วง` : ''}</div>
     ${free.length ? `<div class="tg sv">${free.map(t => chip(t === st.pick, 'pick', `data-t="${t}"`, t)).join('')}</div>` : '<div class="mu" style="padding:6px 0 10px">วันนี้ไม่มีช่วงว่าง</div>'}
     <div class="lab2">ลูกค้า</div>
