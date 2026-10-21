@@ -925,7 +925,8 @@ function helpSheet() {
   const times = [...new Set(d.days.filter(x => !x.closed && x.open).map(x => x.open + '–' + x.close))];
   openSheet(`<div class="help"><h3>วิธีใช้</h3>
     <h4><i class="ti ti-building-store"></i> เวลาร้าน</h4>
-    <ul><li>เปิด ${esc(times.length === 1 ? times[0] : d.open + '–' + d.close + ' (แต่ละวันอาจต่างกัน ดูได้ตอนเลือกวัน)')} · ${esc(closedText(d.closedDays))}</li>
+    <ul><li>ดูเวลาเปิดปิดได้ที่ท้ายหน้าจองและหน้าตั๋ว</li>
+      <li>เปิด ${esc(times.length === 1 ? times[0] : d.open + '–' + d.close + ' (แต่ละวันอาจต่างกัน ดูได้ตอนเลือกวัน)')} · ${esc(closedText(d.closedDays))}</li>
       <li>จองล่วงหน้าได้ ${d.days.length - 1} วัน (นับจากวันนี้)</li></ul>
     <h4><i class="ti ti-calendar-plus"></i> จองคิว</h4>
     <ul><li>เลือกวัน แล้วเลื่อนวงล้อ (หรือกด ‹ ›) ไปเวลาที่อยากมา</li>
