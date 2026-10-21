@@ -962,7 +962,7 @@ function showMember() {
   $('#app').onclick = null;
   $('#app').innerHTML = `
     <div class="head" style="align-items:center"><span style="display:flex;align-items:center;gap:10px;min-width:0">
-      <button id="mback" class="au" aria-label="กลับ" style="font-size:24px;padding:8px 8px 8px 0;min-width:40px;min-height:44px"><i class="ti ti-chevron-left"></i></button>${logoTag(40)}<span class="sv brand">${esc(S.d.shop)}</span></span><span class="mu">สมาชิก</span></div>
+      <button id="mback" class="au" style="display:inline-flex;align-items:center;gap:2px;font-size:15px;padding:8px 8px 8px 0;min-height:44px;white-space:nowrap"><i class="ti ti-chevron-left" style="font-size:22px"></i>กลับ</button>${logoTag(40)}<span class="sv brand">${esc(S.d.shop)}</span></span><span class="mu">สมาชิก</span></div>
     <div class="field"><i class="ti ti-phone"></i><input id="mp" placeholder="เบอร์โทรที่ใช้จอง" inputmode="tel" maxlength="12" value="${esc(me.phone || store.get('k10_mphone', ''))}">
       <button id="mgo" class="au" style="font-size:20px;padding:6px" aria-label="ดูแต้ม"><i class="ti ti-arrow-right"></i></button></div>
     <div class="err" id="merr"></div>
