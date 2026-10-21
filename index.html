@@ -1142,9 +1142,10 @@ async function addSheet(time, date) {
   const chip = (on, a, attrs, label, sub) => `<button class="chip ${on ? 'on' : ''}" data-a="${a}" ${attrs}>${label}${sub ? `<small>${sub}</small>` : ''}</button>`;
   const custHtml = () => {
     const list = st.found || B.recent;
+    // ไม่ระบุ + ลูกค้าใหม่ อยู่ต้นแถบเสมอ (รายชื่อเยอะแค่ไหนก็ไม่ล้นหาย)
     return chip(st.mode === 'walk', 'walk', '', '<i class="ti ti-walk"></i> ไม่ระบุ') +
-      list.map(m => chip(st.mode === 'who' && st.who && st.who.phone === m.phone, 'who', `data-p="${esc(m.phone)}"`, esc(m.name || m.phone), esc(m.phone.slice(-4)))).join('') +
-      chip(st.mode === 'new', 'newc', '', '<i class="ti ti-plus"></i> ลูกค้าใหม่');
+      chip(st.mode === 'new', 'newc', '', '<i class="ti ti-plus"></i> ใหม่') +
+      list.map(m => chip(st.mode === 'who' && st.who && st.who.phone === m.phone, 'who', `data-p="${esc(m.phone)}"`, esc(m.name || m.phone), esc(m.phone.slice(-4)))).join('');
   };
   const newHtml = () => st.mode === 'new' ? `<div class="nrow">
       <div class="field"><i class="ti ti-user"></i><input id="an" value="${esc(st.nn)}" placeholder="ชื่อ" maxlength="40"></div>
