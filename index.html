@@ -762,19 +762,34 @@ async function showLogin() {
   const st = await call('barberStatus');
   await ensureLogo(st.logoVer, st.logoShape);
   const first = !st.hasPin, t1 = first ? 'ตั้ง PIN สำหรับช่าง (4–8 หลัก)' : 'ใส่ PIN';
+  let admin = false;
   $('#app').innerHTML = `<div id="pr" style="text-align:center;padding-top:36px">
       ${logoTag(64, 'display:block;margin:0 auto') || '<i class="ti ti-scissors au" style="font-size:26px"></i>'}
-      <div class="sv brand" style="margin:8px 0 18px">${esc(st.shop)}</div>${padHtml(t1)}</div>`;
+      <div class="sv brand" style="margin:8px 0 18px">${esc(st.shop)}</div>${padHtml(t1)}
+      ${!first && st.hasAdmin ? '<button class="link" id="asadmin" style="margin-top:14px"><i class="ti ti-shield-lock"></i> เข้าสู่ระบบแบบผู้ดูแลระบบ</button><button class="link" id="aforgot" style="display:none;padding-top:0">ลืม PIN ผู้ดูแลระบบ? ส่ง PIN ใหม่ทางอีเมล</button>' : ''}</div>`;
   let firstVal = '';
-  bindPad($('#pr'), async (v, pad) => {
+  const pad0 = bindPad($('#pr'), async (v, pad) => {
     if (first && !firstVal) { firstVal = v; return pad.reset('ใส่ PIN อีกครั้ง'); }
     if (first && v !== firstVal) { firstVal = ''; return pad.reset(t1, 'PIN สองครั้งไม่ตรงกัน'); }
     pad.wait('กำลังตรวจ…');
-    const r = await call(first ? 'barberSetPin' : 'barberLogin', v).catch(() => ({ ok: false, msg: 'เชื่อมต่อไม่สำเร็จ' }));
+    const r = await call(first ? 'barberSetPin' : 'barberLogin', v, admin).catch(() => ({ ok: false, msg: 'เชื่อมต่อไม่สำเร็จ' }));
     if (!r.ok) { firstVal = ''; return pad.reset(first ? t1 : null, r.msg); }
     B.sess = r.sess; store.set('k10_sess', r.sess);
     boot();
-  }, () => first ? firstVal.length : st.pinLen);
+  }, () => first ? firstVal.length : admin ? st.adminLen : st.pinLen);
+  if ($('#asadmin')) $('#asadmin').onclick = () => {
+    admin = !admin;
+    $('#asadmin').innerHTML = admin ? '<i class="ti ti-scissors"></i> กลับไปเข้าแบบช่าง' : '<i class="ti ti-shield-lock"></i> เข้าสู่ระบบแบบผู้ดูแลระบบ';
+    pad0.reset(admin ? 'ใส่ PIN ผู้ดูแลระบบ' : t1);
+    $('#kt').classList.toggle('au', admin);
+    $('#aforgot').style.display = admin ? '' : 'none';
+  };
+  if ($('#aforgot')) $('#aforgot').onclick = () => askConfirm('ส่ง PIN ผู้ดูแลระบบใหม่ไปทางอีเมล? (PIN เดิมจะใช้ไม่ได้)', 'ส่ง PIN ใหม่', async () => {
+    const r = await call('adminForgot').catch(() => ({ ok: false, msg: 'เชื่อมต่อไม่สำเร็จ' }));
+    if (!r.ok) return pad0.reset('ใส่ PIN ผู้ดูแลระบบ', r.msg);
+    st.adminLen = 6; pad0.reset('ใส่ PIN ผู้ดูแลระบบ (6 หลักจากอีเมล)');
+    toast('ส่ง PIN ใหม่ไปที่ ' + r.to + ' แล้ว');
+  }, 'ไม่ส่ง');
 }
 
 /*** ---------- คิววันนี้ ---------- ***/
@@ -1352,7 +1367,8 @@ const SET_PAGES = {
   warn: ['ti-alert-triangle', 'การเตือน', s => `ไม่มา ${s.noshowWarn} ครั้ง · เลื่อนเองได้ ${s.moveLimit || 'ไม่จำกัด'}${s.moveLimit ? ' ครั้ง' : ''} · หายเกิน ${s.lostDays} วัน`],
   push: ['ti-bell-ringing', 'แจ้งเตือนบนมือถือ', () => '<span id="pushsum">…</span>'],
   manual: ['ti-book', 'คู่มือการใช้งาน', () => 'วิธีใช้ทุกส่วนของหน้าช่าง'],
-  account: ['ti-lock', 'บัญชีช่าง', () => 'เปลี่ยน PIN · ชีตข้อมูล · ออกจากระบบ']
+  account: ['ti-lock', 'บัญชีช่าง', () => 'เปลี่ยน PIN · ชีตข้อมูล · ออกจากระบบ'],
+  admin: ['ti-shield-lock', 'ผู้ดูแลระบบ', () => 'ตั้ง PIN ช่างใหม่ · ออกจากระบบทุกเครื่อง · ล้างข้อมูลทดสอบ']
 };
 const EDIT_PAGES = ['shop', 'price', 'pay', 'notice', 'member', 'warn'];   // หน้าที่ต้องกด "บันทึก" (โปรโมชั่นบันทึกทันที)
 
@@ -1402,8 +1418,11 @@ const termsData = s => ({ tiers: s.tiers, rewards: s.rewards, boosts: s.boosts.f
   birthdayBonus: s.birthdayOn ? s.birthdayBonus : 0, referralBonus: s.referralOn ? s.referralBonus : 0 });
 function showTerms() { openSheet(termsHtml(termsData(B.setSaved))).classList.add('full'); }
 function showPromo() { openSheet(promoHtml(termsData(B.setSaved))).classList.add('full'); }
+// หมวดผู้ดูแลระบบ เห็นเฉพาะตอนเข้าแบบ admin
+const pageKeys = () => Object.keys(SET_PAGES).filter(k => k !== 'admin' || (B.setSaved && B.setSaved.isAdmin));
+const adminTag = () => B.setSaved && B.setSaved.isAdmin ? '<span class="badge" style="border-color:var(--c-note);color:var(--c-note);margin-left:8px;vertical-align:4px"><i class="ti ti-shield-lock"></i> ผู้ดูแลระบบ</span>' : '';
 function menuHtml(s, sel) {
-  return Object.keys(SET_PAGES).map(k => `<button class="menu-it ${k === sel ? 'sel' : ''}" data-a="page" data-p="${k}">
+  return pageKeys().map(k => `<button class="menu-it ${k === sel ? 'sel' : ''}" data-a="page" data-p="${k}">
     <span class="mic"><i class="ti ${SET_PAGES[k][0]}"></i></span>
     <span style="flex:1;min-width:0">${SET_PAGES[k][1]}<span class="mu" style="display:block">${SET_PAGES[k][2](s)}</span></span>
     <i class="ti ti-chevron-right mu"></i></button>`).join('');
@@ -1435,10 +1454,10 @@ function afterPage(pg, s) {
 function renderSettings() {
   const s = B.set;
   if (isTabL()) {   // แท็บเล็ตแนวนอน: หมวดซ้าย เนื้อหาขวา
-    const pg = B.setPage = B.setPage || Object.keys(SET_PAGES)[0];
+    const pg = B.setPage = B.setPage || pageKeys()[0];
     const [icon, title] = SET_PAGES[pg];
     $('#app').innerHTML = `<div class="md">
-      <div class="set"><div class="head"><span class="sv brand">ตั้งค่า</span></div>${menuHtml(s, pg)}</div>
+      <div class="set"><div class="head"><span class="sv brand">ตั้งค่า${adminTag()}</span></div>${menuHtml(s, pg)}</div>
       <div class="md-r set"><div class="head"><span class="sv brand"><i class="ti ${icon} au" style="font-size:19px"></i> ${title}</span></div>${pageBody(pg, s)}</div></div>`;
     fillPushSum(); afterPage(pg, s); updateSaveBtn();
     return;
@@ -1446,8 +1465,8 @@ function renderSettings() {
   const pg = B.setPage;
   if (!pg) {
     $('#app').innerHTML = `<div class="set">
-      <div class="head"><span class="sv brand">ตั้งค่า</span></div>
-      ${Object.keys(SET_PAGES).map(k => `<button class="menu-it" data-a="page" data-p="${k}">
+      <div class="head"><span class="sv brand">ตั้งค่า${adminTag()}</span></div>
+      ${pageKeys().map(k => `<button class="menu-it" data-a="page" data-p="${k}">
         <span class="mic"><i class="ti ${SET_PAGES[k][0]}"></i></span>
         <span style="flex:1;min-width:0">${SET_PAGES[k][1]}<span class="mu" style="display:block">${SET_PAGES[k][2](s)}</span></span>
         <i class="ti ti-chevron-right mu"></i></button>`).join('')}</div>`;
@@ -1596,8 +1615,17 @@ const PAGE_BODY = {
       <button class="au" data-a="copy" data-u="${u}" aria-label="คัดลอกลิงก์" style="font-size:20px;padding:10px"><i class="ti ti-copy"></i></button></div>`).join('')}`,
   push: () => '<div id="pushbox"><div class="mu">กำลังตรวจ…</div></div>',
   manual: s => `<div class="man">${manualHtml(B.setSaved || s)}</div>`,
+  admin: () => `
+    <div class="mu" style="margin-bottom:6px">เห็นเฉพาะตอนเข้าแบบผู้ดูแลระบบ · ช่างไม่เห็นหมวดนี้</div>
+    <button class="act" data-a="adreset"><i class="ti ti-key"></i>ตั้ง PIN ช่างใหม่<span class="mu" style="margin-left:auto">ใช้ตอนช่างลืม PIN</span></button>
+    <button class="act" data-a="adlogout"><i class="ti ti-logout-2"></i>ออกจากระบบทุกเครื่อง<span class="mu" style="margin-left:auto">ยกเว้นเครื่องนี้</span></button>
+    <button class="act" data-a="adpin"><i class="ti ti-shield-lock"></i>เปลี่ยน PIN ผู้ดูแลระบบ</button>
+    <button class="act" data-a="ademail"><i class="ti ti-mail"></i>อีเมลรับ PIN เมื่อลืม<span class="mu" style="margin-left:auto">${esc(B.setSaved.adminEmail || '')}</span></button>
+    <button class="act warn" data-a="adwipe"><i class="ti ti-trash"></i>ล้างข้อมูลทดสอบ<span class="mu" style="margin-left:auto">คิว · สมาชิก · แต้ม</span></button>
+    <div class="mu" style="margin-top:12px">ล้างข้อมูลทดสอบ: ลบคิว สมาชิก และแต้มทั้งหมด · ตั้งค่าร้าน ราคา โลโก้ และ PIN ยังอยู่ · กู้คืนไม่ได้</div>`,
   account: s => `
-    <button class="act" data-a="pin"><i class="ti ti-key"></i>เปลี่ยน PIN</button>
+    <button class="act" data-a="pin"><i class="ti ti-key"></i>เปลี่ยน PIN ช่าง</button>
+    ${s.hasAdmin ? '' : '<button class="act" data-a="adminsetup"><i class="ti ti-shield-plus"></i>ตั้ง PIN ผู้ดูแลระบบ<span class="mu" style="margin-left:auto">ตั้งได้ครั้งเดียว</span></button>'}
     <a class="act" href="${esc(s.sheetUrl)}" target="_blank"><i class="ti ti-table"></i>เปิดชีตข้อมูลคิว</a>
     <button class="act" data-a="logout"><i class="ti ti-logout"></i>ออกจากระบบเครื่องนี้</button>`
 };
@@ -1798,12 +1826,48 @@ $('#app').addEventListener('click', async e => {
   if (a === 'pushOn' || a === 'pushOff' || a === 'pushTest' || a === 'pushTestLater') return pushAction(a, b);
   if (a === 'save') return saveSet(b);
   if (a === 'pin') return pinSheet();
+  if (a === 'adminsetup') return newPinSheet('ตั้ง PIN ผู้ดูแลระบบ', 'adminSetup', 'ตั้ง PIN ผู้ดูแลระบบแล้ว · เข้าแบบผู้ดูแลระบบได้ที่หน้าใส่ PIN');
+  if (a === 'adreset') return newPinSheet('ตั้ง PIN ช่างใหม่', 'adminResetBarberPin', 'ตั้ง PIN ช่างใหม่แล้ว');
+  if (a === 'ademail') return textSheet('อีเมลรับ PIN ผู้ดูแลระบบใหม่ (เมื่อลืม)', 'อีเมล (เว้นว่าง = อีเมลเจ้าของระบบ)', B.setSaved.adminEmail, 'email', async v => {
+    const r = await api('adminSetEmail', v).catch(() => null);
+    if (!r) return;
+    if (!r.ok) return toast(r.msg);
+    closeSheet(); B.setSaved.adminEmail = B.set.adminEmail = r.email; renderSettings(); toast('บันทึกอีเมลแล้ว');
+  });
+  if (a === 'adpin') return newPinSheet('เปลี่ยน PIN ผู้ดูแลระบบ', 'adminChangePin', 'เปลี่ยน PIN ผู้ดูแลระบบแล้ว');
+  if (a === 'adlogout') return askConfirm('ออกจากระบบทุกเครื่อง? (เครื่องอื่นต้องใส่ PIN ใหม่)', 'ออกจากระบบทุกเครื่อง', async () => {
+    const r = await api('adminLogoutAll').catch(() => null);
+    if (r && r.ok) toast(`ออกจากระบบแล้ว ${r.count} เครื่อง`);
+  }, 'ไม่ทำ');
+  if (a === 'adwipe') return askConfirm('ล้างข้อมูลทดสอบ? ลบคิว สมาชิก และแต้มทั้งหมด', 'ล้างข้อมูล', () =>
+    askConfirm('ยืนยันอีกครั้ง: ลบถาวร กู้คืนไม่ได้', 'ลบถาวร', async () => {
+      const r = await api('adminWipe', 'ล้างข้อมูล').catch(() => null);
+      if (!r) return;
+      if (!r.ok) return toast(r.msg);
+      B.recent = null;
+      toast(`ล้างแล้ว · คิว ${r.removed.Bookings} · สมาชิก ${r.removed.Members} · แต้ม ${r.removed.Points} รายการ`);
+      loadDay('').catch(() => {});
+    }, 'ไม่ลบ'), 'ไม่ล้าง');
   if (a === 'logout') return askConfirm('ออกจากระบบเครื่องนี้?', 'ออกจากระบบ', async () => {
     await call('barberLogout', B.sess).catch(() => {});
     store.del('k10_sess'); B.sess = ''; saveSessForSw(''); showLogin();
   });
 });
 
+// ตั้ง PIN ใหม่ (ใส่ 2 ครั้ง) แล้วส่งไปคำสั่ง fn
+function newPinSheet(title, fn, okMsg) {
+  const sh = openSheet(`<div id="pr3" style="text-align:center"><h3>${esc(title)}</h3>${padHtml('PIN ใหม่ (4–8 หลัก)')}</div>`);
+  let first = '';
+  bindPad($('#pr3', sh), async (v, pad) => {
+    if (!first) { first = v; return pad.reset('ใส่ PIN อีกครั้ง'); }
+    if (v !== first) { first = ''; return pad.reset('PIN ใหม่ (4–8 หลัก)', 'PIN สองครั้งไม่ตรงกัน'); }
+    pad.wait('กำลังบันทึก…');
+    const r = await api(fn, v).catch(() => null);
+    if (!r || !r.ok) { first = ''; return pad.reset('PIN ใหม่ (4–8 หลัก)', r ? r.msg : 'เชื่อมต่อไม่สำเร็จ'); }
+    closeSheet(); toast(okMsg);
+    if (fn === 'adminSetup') { B.setSaved.hasAdmin = B.set.hasAdmin = true; renderSettings(); }
+  }, () => first ? first.length : 0);
+}
 async function pinSheet() {
   const st = await call('barberStatus').catch(() => ({ pinLen: 0 }));
   const sh = openSheet(`<div id="pr2" style="text-align:center"><h3>เปลี่ยน PIN</h3>${padHtml('PIN เดิม')}</div>`);
@@ -2047,7 +2111,7 @@ async function memberSheet(phone) {
 // กล่องพิมพ์ข้อความสั้น (ใช้เฉพาะที่ต้องพิมพ์จริง ๆ)
 function textSheet(title, ph, value, type, onSave) {
   const sh = stackSheet(`<h3>${esc(title)}</h3>
-    <div class="field"><i class="ti ti-${type === 'tel' ? 'phone' : 'user'}"></i><input id="tx" value="${esc(value || '')}" placeholder="${esc(ph)}" ${type === 'tel' ? 'inputmode="tel" maxlength="12"' : 'maxlength="40"'}></div>
+    <div class="field"><i class="ti ti-${type === 'tel' ? 'phone' : 'user'}"></i><input id="tx" value="${esc(value || '')}" placeholder="${esc(ph)}" ${type === 'tel' ? 'inputmode="tel" maxlength="12"' : type === 'email' ? 'type="email" inputmode="email" maxlength="100" autocomplete="email"' : 'maxlength="40"'}></div>
     <button class="btn" data-a="ok" style="margin-top:16px">บันทึก</button>`, a => { if (a === 'ok') onSave($('#tx', sh).value.trim()); });
   setTimeout(() => $('#tx', sh).focus(), 50);
 }
@@ -2506,7 +2570,8 @@ function manualHtml(s) {
     <li><b>7. QR และลิงก์ร้าน:</b> QR สำหรับ<b>จองคิว</b> (ไม่ใช่ QR รับเงิน) · คัดลอกลิงก์ หรือบันทึกรูปไปปริ้นแปะหน้าร้าน · เปลี่ยนโลโก้แล้วให้บันทึกรูปใหม่</li>
     <li><b>8. การเตือน:</b> ไม่มากี่ครั้งขึ้นป้าย · ลูกค้าเลื่อนเองได้กี่ครั้ง · เลื่อน/ยกเลิกเองได้ถึงกี่ชั่วโมงก่อนคิว · เลื่อนกี่ครั้งขึ้นป้าย · ลูกค้าหายไปกี่วัน (ตั้ง 0 = ไม่จำกัด)</li>
     <li><b>9. แจ้งเตือนบนมือถือ:</b> เปิดครั้งเดียวต่อเครื่อง · มีปุ่มทดสอบ</li>
-    <li><b>10. คู่มือการใช้งาน</b> (หน้านี้) · <b>11. บัญชีช่าง:</b> เปลี่ยน PIN · เปิดชีตข้อมูล · ออกจากระบบ</li>
+    <li><b>10. คู่มือการใช้งาน</b> (หน้านี้) · <b>11. บัญชีช่าง:</b> เปลี่ยน PIN ช่าง · ตั้ง PIN ผู้ดูแลระบบ (ครั้งแรกครั้งเดียว) · เปิดชีตข้อมูล · ออกจากระบบ</li>
+    <li><b>ผู้ดูแลระบบ:</b> หน้าใส่ PIN กด "เข้าสู่ระบบแบบผู้ดูแลระบบ" แล้วใส่ PIN admin (ซ้ำกับ PIN ช่างได้) · มีหมวด "ผู้ดูแลระบบ" ท้ายตั้งค่า: ตั้ง PIN ช่างใหม่ (ช่างลืม) · ออกจากระบบทุกเครื่อง · เปลี่ยน PIN admin · อีเมลรับ PIN · ล้างข้อมูลทดสอบ · admin ลืม PIN: หน้าใส่ PIN แบบผู้ดูแลระบบ → "ลืม PIN" ระบบส่ง PIN ใหม่ 6 หลักไปทางอีเมล</li>
     <li>หน้า ราคา / การรับเงิน / ประกาศ / ร้าน / สมาชิกและรางวัล / การเตือน: แก้แล้วต้องกด "บันทึก" · ปุ่มจาง "ยังไม่มีการแก้ไข" = ยังไม่ได้เปลี่ยนอะไร ออกได้เลย · แก้แล้วออกโดยไม่บันทึก ระบบจะถามก่อน · โปรโมชั่น / โลโก้ / QR ธนาคาร บันทึกทันทีไม่ต้องกด</li>
     <li>ช่องวันที่แสดงแบบ วัน เดือน ปี (เช่น 23 ต.ค. 69) · แตะช่องเพื่อเปิดปฏิทินเลือกวัน</li>
   </ul>
